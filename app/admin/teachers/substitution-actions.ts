@@ -112,7 +112,7 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
     });
 
     // Filter out busy teachers
-    const availableTeachers = allTeachers.filter(t => !busyTeacherIds.has(t.id));
+    const availableTeachers = allTeachers.filter((t: any) => !busyTeacherIds.has(t.id));
 
     return availableTeachers;
 }
