@@ -38,7 +38,7 @@ export default async function AdminTeachersPage() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {usersList.map((user) => (
+                            {usersList.map((user: any) => (
                                 <TeacherRow key={user.id} user={user} />
                             ))}
                             {usersList.length === 0 && (
