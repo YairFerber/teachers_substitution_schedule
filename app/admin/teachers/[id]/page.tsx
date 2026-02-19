@@ -34,7 +34,7 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
     }
 
     // Convert keys for ScheduleGrid/Manager
-    const formattedSchedule: any[] = schedule.map(s => ({
+    const formattedSchedule: any[] = schedule.map((s: any) => ({
         ...s,
     }));
 
