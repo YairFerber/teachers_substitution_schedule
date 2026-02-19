@@ -39,7 +39,7 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
     }));
 
     // Convert Periods
-    const formattedPeriods = periods.map(p => ({
+    const formattedPeriods = periods.map((p: any) => ({
         index: p.index,
         startTime: p.startTime,
         endTime: p.endTime
