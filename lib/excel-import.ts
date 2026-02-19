@@ -157,8 +157,7 @@ export async function importScheduleFromExcel(buffer: ArrayBuffer) {
         // Execute in chunks just in case
         for (let i = 0; i < newClassArray.length; i += 100) {
             await prisma.class.createMany({
-                data: newClassArray.slice(i, i + 100),
-                skipDuplicates: true
+                data: newClassArray.slice(i, i + 100)
             });
         }
     }
