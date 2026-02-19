@@ -90,7 +90,7 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
         select: { teacherId: true }
     });
 
-    const busyTeacherIds = new Set(busySchedules.map(s => s.teacherId));
+    const busyTeacherIds = new Set(busySchedules.map((s: any) => s.teacherId));
 
     // 2. Get teachers busy because they are SUBSTITUTING for someone else at this time
     const busySubstitutes = await prisma.substitution.findMany({
