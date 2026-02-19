@@ -29,15 +29,13 @@ export async function importScheduleFromExcel(buffer: ArrayBuffer) {
     // Clear Schedule and Substitutions
     await prisma.substitution.deleteMany({});
     await prisma.schedule.deleteMany({});
-    // We don't delete Teachers/Users to preserve accounts/logins if possible, 
-    // BUT user said "import new excel... to overwrite". 
-    // For now, let's keep it safe: Keep Teachers, just update them. 
-    // If new teachers -> create.
-    // If old teachers not in file -> they stay but have no schedule.
 
-    // Actually, to truly "overwrite", we should probably handle cancellations.
-    // But let's stick to the core request: "load a new excel file to overright the DB"
-    // I will clear Schedule.
+    // Cache existing classes to avoid repetitive DB calls
+    const existingClasses = await prisma.class.findMany();
+    const classSet = new Set(existingClasses.map(c => c.name));
+    const newClasses = new Set<string>();
+
+    const schedulesToCreate: any[] = [];
 
     for (let i = 0; i < sheetNames.length; i++) {
         const sheetName = sheetNames[i];
@@ -132,28 +130,47 @@ export async function importScheduleFromExcel(buffer: ArrayBuffer) {
                 else if (typeToCheck.includes('פרטני') || content.includes('פרטני')) type = 'INDIVIDUAL';
                 else if (typeToCheck.includes('ישיבה') || content.includes('צוות')) type = 'MEETING';
 
-                let classId = null;
                 if (className && className.length < 50) {
-                    const cls = await prisma.class.upsert({
-                        where: { id: className },
-                        update: {},
-                        create: { name: className, id: className }
-                    });
-                    classId = cls.id;
+                    if (!classSet.has(className)) {
+                        newClasses.add(className);
+                        classSet.add(className);
+                    }
                 }
 
-                // Create Schedule Item
-                await prisma.schedule.create({
-                    data: {
-                        teacherId: teacher.id,
-                        dayOfWeek: C - 1, // 0-6
-                        hourIndex: hourIndex,
-                        classId: classId,
-                        type: type,
-                        subject: subject,
-                    }
+                schedulesToCreate.push({
+                    teacherId: teacher.id,
+                    dayOfWeek: C - 1, // 0-6
+                    hourIndex: hourIndex,
+                    classId: (className && className.length < 50) ? className : null,
+                    type: type,
+                    subject: subject,
                 });
             }
         }
     }
+}
+
+// Batch Create Classes
+if (newClasses.size > 0) {
+    console.log(`Creating ${newClasses.size} new classes...`);
+    const newClassArray = Array.from(newClasses).map(name => ({ id: name, name }));
+    // Execute in chunks just in case
+    for (let i = 0; i < newClassArray.length; i += 100) {
+        await prisma.class.createMany({
+            data: newClassArray.slice(i, i + 100),
+            skipDuplicates: true
+        });
+    }
+}
+
+// Batch Create Schedules
+console.log(`Creating ${schedulesToCreate.length} schedule items...`);
+// Chunk size 500 is safe
+const CHUNK_SIZE = 500;
+for (let i = 0; i < schedulesToCreate.length; i += CHUNK_SIZE) {
+    const chunk = schedulesToCreate.slice(i, i + CHUNK_SIZE);
+    await prisma.schedule.createMany({
+        data: chunk
+    });
+}
 }
