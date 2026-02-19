@@ -25,7 +25,7 @@ export interface ScheduleItem {
     classId: string | null;
     class?: Class | null;
     subject?: string | null;
-    type: 'REGULAR' | 'FREE' | 'TEAM_MEETING' | 'STAY' | 'INDIVIDUAL' | 'MEETING';
+    type: 'REGULAR' | 'FREE' | 'TEAM_MEETING' | 'STAY' | 'INDIVIDUAL' | 'MEETING' | 'ABSENT_DISPLAY' | 'COVERED_ABSENCE_DISPLAY' | 'COVERED_DISPLAY';
     substitutions?: Substitution[];
 }
 
