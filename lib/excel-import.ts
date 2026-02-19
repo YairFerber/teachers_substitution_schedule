@@ -148,29 +148,29 @@ export async function importScheduleFromExcel(buffer: ArrayBuffer) {
             }
         }
     }
-}
 
-// Batch Create Classes
-if (newClasses.size > 0) {
-    console.log(`Creating ${newClasses.size} new classes...`);
-    const newClassArray = Array.from(newClasses).map(name => ({ id: name, name }));
-    // Execute in chunks just in case
-    for (let i = 0; i < newClassArray.length; i += 100) {
-        await prisma.class.createMany({
-            data: newClassArray.slice(i, i + 100),
-            skipDuplicates: true
+
+    // Batch Create Classes
+    if (newClasses.size > 0) {
+        console.log(`Creating ${newClasses.size} new classes...`);
+        const newClassArray = Array.from(newClasses).map(name => ({ id: name, name }));
+        // Execute in chunks just in case
+        for (let i = 0; i < newClassArray.length; i += 100) {
+            await prisma.class.createMany({
+                data: newClassArray.slice(i, i + 100),
+                skipDuplicates: true
+            });
+        }
+    }
+
+    // Batch Create Schedules
+    console.log(`Creating ${schedulesToCreate.length} schedule items...`);
+    // Chunk size 500 is safe
+    const CHUNK_SIZE = 500;
+    for (let i = 0; i < schedulesToCreate.length; i += CHUNK_SIZE) {
+        const chunk = schedulesToCreate.slice(i, i + CHUNK_SIZE);
+        await prisma.schedule.createMany({
+            data: chunk
         });
     }
-}
-
-// Batch Create Schedules
-console.log(`Creating ${schedulesToCreate.length} schedule items...`);
-// Chunk size 500 is safe
-const CHUNK_SIZE = 500;
-for (let i = 0; i < schedulesToCreate.length; i += CHUNK_SIZE) {
-    const chunk = schedulesToCreate.slice(i, i + CHUNK_SIZE);
-    await prisma.schedule.createMany({
-        data: chunk
-    });
-}
 }
