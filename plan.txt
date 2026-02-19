@@ -1,0 +1,42 @@
+i want to build a teacher schedule app
+
+the app will have the following features:
+first it should have a pc web app and mobile app
+you could login to the app as an admin or one of the teachers
+as an admin you could add teachers and classes and assign them to the teachers
+as a teacher you could see your schedule and add classes to it.
+the app should have a database to store the schedule and the users.
+the app should have a calendar view to see the schedule.
+
+the admin user should be able to see all teachers schedule
+there should be a tab where the admin can edit a teachers page.
+that is you can edit information about the teachers 
+    first name
+    last name
+    email
+    phone number
+    Schedule - classes
+    login credentials
+in the teachers page you will see the schedual in the calendar view and you can edit it.
+the admin user should be able to see all teachers schedule
+you will also have a live report of absences and substitution the teacher made for other teachers
+
+in the calendar view you will see the schedule of the teacher color coded
+    white - regilar schedual classes
+    green - free time
+    red - missing regular classes
+    yellow - substitute classes
+
+    there will also be a monthly report of absences and substitution the teacher made for other teachers
+
+    if a teacher is absent , the admin can click the class and he will get a list of free teachers to substitute for the class
+    the assignd teacher will get notification that he has a substitute class and he can accept or reject it.
+    if rejected the admin will get a new list of teachers to substitute for the class
+
+    the admin will have a tab with a list of additional substitut teachers how are not regular teachers in the school.
+    he can always add new teachers to the list and remove them.
+    these teachers will be able to substitute for any teacher in the school unless already assigned to a class at the specific time
+
+    the admin will have a report tab to see a monthly report of absences and substitution the teacher made for other teachers for the full list of teachers
+
+    i think that is all the features i need for now, do you have any more suggestions? or do you need any clarification?

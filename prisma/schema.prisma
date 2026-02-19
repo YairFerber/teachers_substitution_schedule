@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// NextAuth Models
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique // Added for Username login
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // Will store hashed PIN
+  displayPin    String?   // For Admin usage (Raw PIN)
+  role          String    @default("TEACHER") // ADMIN, TEACHER
+  accounts      Account[]
+  sessions      Session[]
+  
+  teacher   Teacher?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Teacher {
+  id            String   @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?  @unique
+  phone         String?
+  type          String   @default("REGULAR") // REGULAR, SUBSTITUTE
+  userId        String?  @unique
+  user          User?    @relation(fields: [userId], references: [id])
+  
+  schedules     Schedule[]
+  substitutions Substitution[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Class {
+  id        String   @id @default(cuid())
+  name      String
+  schedules Schedule[]
+}
+
+model Period {
+  index     Int      @id // 1, 2, 3...
+  startTime String   // e.g. "08:00"
+  endTime   String   // e.g. "08:45"
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  dayOfWeek Int      // 0-6 (Sunday-Saturday)
+  hourIndex Int      // 1-10 (1st hour, 2nd hour, etc.)
+  
+  classId   String?
+  class     Class?   @relation(fields: [classId], references: [id])
+  
+  subject   String?  // e.g. "Math", "English"
+  type      String   @default("REGULAR") // REGULAR, FREE, TEAM_MEETING
+  
+  substitutions Substitution[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teacherId, dayOfWeek, hourIndex])
+}
+
+model Substitution {
+  id                String   @id @default(cuid())
+  scheduleId        String
+  schedule          Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  substituteTeacherId String?
+  substituteTeacher   Teacher? @relation(fields: [substituteTeacherId], references: [id])
+  
+  date              DateTime
+  status            String   @default("ABSENT") // ABSENT (Red), COVERED (Green), PENDING (Yellow - if used for request flow)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([scheduleId, date])
+}

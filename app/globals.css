@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #daily-grid-container,
+  #daily-grid-container * {
+    visibility: visible;
+  }
+
+  #daily-grid-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hide buttons, toolbars, and specific elements when printing */
+  .pattern-print-hide,
+  button,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Print Only Header */
+  .print-only-header {
+    display: block !important;
+    text-align: center;
+    font-size: 18pt;
+    font-weight: bold;
+    margin-bottom: 20px;
+    width: 100%;
+    page-break-after: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure table borders are visible */
+  table {
+    border-collapse: collapse;
+    width: 100% !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #ddd !important;
+    padding: 6px !important;
+    /* Slightly more padding for readability */
+    font-size: 10pt !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Preserve background colors for badges/cells */
+  .bg-red-500,
+  .bg-green-500,
+  .bg-yellow-100,
+  .bg-indigo-500 {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove sticky positioning for print which causes issues */
+  thead th.sticky,
+  tbody td.sticky {
+    position: static !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure page fits nicely */
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+}
