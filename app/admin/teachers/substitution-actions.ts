@@ -107,7 +107,7 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
         select: { substituteTeacherId: true }
     });
 
-    busySubstitutes.forEach(s => {
+    busySubstitutes.forEach((s: any) => {
         if (s.substituteTeacherId) busyTeacherIds.add(s.substituteTeacherId);
     });
 
