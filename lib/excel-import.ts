@@ -65,7 +65,7 @@ export async function importScheduleFromExcel(buffer: ArrayBuffer) {
             where: {
                 OR: [
                     { username: sheetName },
-                    { teacherId: teacher.id }
+                    { teacher: { id: teacher.id } }
                 ]
             }
         });
