@@ -107,11 +107,11 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
             );
 
             if (sub && sub.status === 'ABSENT') {
-                return { ...item, type: 'ABSENT_DISPLAY', subject: 'ABSENT' };
+                return { ...item, type: 'ABSENT_DISPLAY' as const, subject: 'ABSENT' };
             }
             if (sub && sub.status === 'COVERED' && sub.schedule?.teacherId === teacherId) {
                 // Return new style: Red BG with Green indicator
-                return { ...item, type: 'COVERED_ABSENCE_DISPLAY', subject: `Cover: ${sub.substituteTeacher?.firstName}`, className: 'bg-green-100' };
+                return { ...item, type: 'COVERED_ABSENCE_DISPLAY' as const, subject: `Cover: ${sub.substituteTeacher?.firstName}`, className: 'bg-green-100' };
             }
             return item;
         });
@@ -126,7 +126,7 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
             classId: cover.schedule.classId,
             class: cover.schedule.class,
             subject: `Sub: ${cover.schedule.subject || 'Class'} (${cover.schedule.teacher?.lastName})`,
-            type: 'COVERED_DISPLAY', // Subs still see Green
+            type: 'COVERED_DISPLAY' as const, // Subs still see Green
             substitutions: [cover]
         }));
 
