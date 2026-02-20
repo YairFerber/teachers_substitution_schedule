@@ -1,0 +1,179 @@
+0 verbose cli /usr/local/Cellar/node/25.6.1/bin/node /usr/local/bin/npm
+1 info using npm@11.9.0
+2 info using node@v25.6.1
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app_desktop/.npmrc
+5 silly config load:file:/Users/yairferber/.npmrc
+6 silly config load:file:/Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app_desktop/etc/npmrc
+7 verbose title npm install better-sqlite3 @prisma/adapter-better-sqlite3
+8 verbose argv "--prefix" "../teacher_schedule_app_desktop" "install" "better-sqlite3" "@prisma/adapter-better-sqlite3" "--cache" ".npm-cache-local"
+9 verbose logfile logs-max:10 dir:/Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app/.npm-cache-local/_logs/2026-02-20T08_35_23_889Z-
+10 verbose logfile /Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app/.npm-cache-local/_logs/2026-02-20T08_35_23_889Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 silly idealTree buildDeps
+14 silly fetch manifest better-sqlite3@*
+15 silly packumentCache full:https://registry.npmjs.org/better-sqlite3 cache-miss
+16 verbose shrinkwrap failed to load node_modules/.package-lock.json out of date, updated: node_modules
+17 http fetch GET 200 https://registry.npmjs.org/better-sqlite3 606ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/better-sqlite3 set size:undefined disposed:false
+19 silly fetch manifest @prisma/adapter-better-sqlite3@*
+20 silly packumentCache full:https://registry.npmjs.org/@prisma%2fadapter-better-sqlite3 cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/npm 987ms
+22 http fetch GET 200 https://registry.npmjs.org/@prisma%2fadapter-better-sqlite3 659ms (cache miss)
+23 silly packumentCache full:https://registry.npmjs.org/@prisma%2fadapter-better-sqlite3 set size:undefined disposed:false
+24 silly placeDep ROOT @prisma/adapter-better-sqlite3@7.4.1 OK for: temp-app@0.1.0 want: *
+25 silly placeDep ROOT better-sqlite3@12.6.2 OK for: temp-app@0.1.0 want: *
+26 silly fetch manifest better-sqlite3@^12.6.0
+27 silly packumentCache full:https://registry.npmjs.org/better-sqlite3 cache-miss
+28 silly fetch manifest bindings@^1.5.0
+29 silly packumentCache full:https://registry.npmjs.org/bindings cache-miss
+30 silly fetch manifest prebuild-install@^7.1.1
+31 silly packumentCache full:https://registry.npmjs.org/prebuild-install cache-miss
+32 http cache https://registry.npmjs.org/better-sqlite3 8ms (cache hit)
+33 silly packumentCache full:https://registry.npmjs.org/better-sqlite3 set size:369802 disposed:false
+34 http fetch GET 200 https://registry.npmjs.org/bindings 99ms (cache miss)
+35 silly packumentCache full:https://registry.npmjs.org/bindings set size:undefined disposed:false
+36 http fetch GET 200 https://registry.npmjs.org/prebuild-install 113ms (cache miss)
+37 silly packumentCache full:https://registry.npmjs.org/prebuild-install set size:undefined disposed:false
+38 silly placeDep ROOT bindings@1.5.0 OK for: better-sqlite3@12.6.2 want: ^1.5.0
+39 silly placeDep ROOT prebuild-install@7.1.3 OK for: better-sqlite3@12.6.2 want: ^7.1.1
+40 silly fetch manifest file-uri-to-path@1.0.0
+41 silly packumentCache full:https://registry.npmjs.org/file-uri-to-path cache-miss
+42 silly fetch manifest rc@^1.2.7
+43 silly packumentCache full:https://registry.npmjs.org/rc cache-miss
+44 silly fetch manifest tar-fs@^2.0.0
+45 silly packumentCache full:https://registry.npmjs.org/tar-fs cache-miss
+46 silly fetch manifest node-abi@^3.3.0
+47 silly packumentCache full:https://registry.npmjs.org/node-abi cache-miss
+48 silly fetch manifest simple-get@^4.0.0
+49 silly packumentCache full:https://registry.npmjs.org/simple-get cache-miss
+50 silly fetch manifest tunnel-agent@^0.6.0
+51 silly packumentCache full:https://registry.npmjs.org/tunnel-agent cache-miss
+52 silly fetch manifest mkdirp-classic@^0.5.3
+53 silly packumentCache full:https://registry.npmjs.org/mkdirp-classic cache-miss
+54 silly fetch manifest expand-template@^2.0.3
+55 silly packumentCache full:https://registry.npmjs.org/expand-template cache-miss
+56 silly fetch manifest napi-build-utils@^2.0.0
+57 silly packumentCache full:https://registry.npmjs.org/napi-build-utils cache-miss
+58 silly fetch manifest github-from-package@0.0.0
+59 silly packumentCache full:https://registry.npmjs.org/github-from-package cache-miss
+60 http fetch GET 200 https://registry.npmjs.org/file-uri-to-path 105ms (cache miss)
+61 silly packumentCache full:https://registry.npmjs.org/file-uri-to-path set size:undefined disposed:false
+62 http fetch GET 200 https://registry.npmjs.org/rc 114ms (cache miss)
+63 silly packumentCache full:https://registry.npmjs.org/rc set size:undefined disposed:false
+64 http fetch GET 200 https://registry.npmjs.org/tunnel-agent 347ms (cache miss)
+65 silly packumentCache full:https://registry.npmjs.org/tunnel-agent set size:undefined disposed:false
+66 http fetch GET 200 https://registry.npmjs.org/simple-get 350ms (cache miss)
+67 silly packumentCache full:https://registry.npmjs.org/simple-get set size:undefined disposed:false
+68 http fetch GET 200 https://registry.npmjs.org/github-from-package 351ms (cache miss)
+69 silly packumentCache full:https://registry.npmjs.org/github-from-package set size:undefined disposed:false
+70 http fetch GET 200 https://registry.npmjs.org/napi-build-utils 359ms (cache miss)
+71 silly packumentCache full:https://registry.npmjs.org/napi-build-utils set size:undefined disposed:false
+72 http fetch GET 200 https://registry.npmjs.org/expand-template 360ms (cache miss)
+73 silly packumentCache full:https://registry.npmjs.org/expand-template set size:undefined disposed:false
+74 http fetch GET 200 https://registry.npmjs.org/mkdirp-classic 374ms (cache miss)
+75 silly packumentCache full:https://registry.npmjs.org/mkdirp-classic set size:undefined disposed:false
+76 http fetch GET 200 https://registry.npmjs.org/tar-fs 397ms (cache miss)
+77 silly packumentCache full:https://registry.npmjs.org/tar-fs set size:undefined disposed:false
+78 http fetch GET 200 https://registry.npmjs.org/node-abi 425ms (cache miss)
+79 silly packumentCache full:https://registry.npmjs.org/node-abi set size:undefined disposed:false
+80 silly placeDep ROOT file-uri-to-path@1.0.0 OK for: bindings@1.5.0 want: 1.0.0
+81 silly placeDep ROOT expand-template@2.0.3 OK for: prebuild-install@7.1.3 want: ^2.0.3
+82 silly placeDep ROOT github-from-package@0.0.0 OK for: prebuild-install@7.1.3 want: 0.0.0
+83 silly placeDep ROOT mkdirp-classic@0.5.3 OK for: prebuild-install@7.1.3 want: ^0.5.3
+84 silly placeDep ROOT napi-build-utils@2.0.0 OK for: prebuild-install@7.1.3 want: ^2.0.0
+85 silly placeDep node_modules/prebuild-install node-abi@3.87.0 OK for: prebuild-install@7.1.3 want: ^3.3.0
+86 silly placeDep ROOT rc@1.2.8 OK for: prebuild-install@7.1.3 want: ^1.2.7
+87 silly placeDep ROOT simple-get@4.0.1 OK for: prebuild-install@7.1.3 want: ^4.0.0
+88 silly placeDep ROOT tar-fs@2.1.4 OK for: prebuild-install@7.1.3 want: ^2.0.0
+89 silly placeDep ROOT tunnel-agent@0.6.0 OK for: prebuild-install@7.1.3 want: ^0.6.0
+90 silly fetch manifest semver@^7.3.5
+91 silly packumentCache full:https://registry.npmjs.org/semver cache-miss
+92 silly fetch manifest ini@~1.3.0
+93 silly packumentCache full:https://registry.npmjs.org/ini cache-miss
+94 silly fetch manifest deep-extend@^0.6.0
+95 silly packumentCache full:https://registry.npmjs.org/deep-extend cache-miss
+96 silly fetch manifest strip-json-comments@~2.0.1
+97 silly packumentCache full:https://registry.npmjs.org/strip-json-comments cache-miss
+98 silly fetch manifest simple-concat@^1.0.0
+99 silly packumentCache full:https://registry.npmjs.org/simple-concat cache-miss
+100 silly fetch manifest chownr@^1.1.1
+101 silly packumentCache full:https://registry.npmjs.org/chownr cache-miss
+102 silly fetch manifest tar-stream@^2.1.4
+103 silly packumentCache full:https://registry.npmjs.org/tar-stream cache-miss
+104 http fetch GET 200 https://registry.npmjs.org/simple-concat 102ms (cache miss)
+105 silly packumentCache full:https://registry.npmjs.org/simple-concat set size:undefined disposed:false
+106 http fetch GET 200 https://registry.npmjs.org/chownr 114ms (cache miss)
+107 silly packumentCache full:https://registry.npmjs.org/chownr set size:undefined disposed:false
+108 http fetch GET 200 https://registry.npmjs.org/deep-extend 116ms (cache miss)
+109 silly packumentCache full:https://registry.npmjs.org/deep-extend set size:undefined disposed:false
+110 http fetch GET 200 https://registry.npmjs.org/ini 122ms (cache miss)
+111 silly packumentCache full:https://registry.npmjs.org/ini set size:undefined disposed:false
+112 http fetch GET 200 https://registry.npmjs.org/strip-json-comments 122ms (cache miss)
+113 silly packumentCache full:https://registry.npmjs.org/strip-json-comments set size:undefined disposed:false
+114 http fetch GET 200 https://registry.npmjs.org/semver 126ms (cache miss)
+115 silly packumentCache full:https://registry.npmjs.org/semver set size:undefined disposed:false
+116 http fetch GET 200 https://registry.npmjs.org/tar-stream 128ms (cache miss)
+117 silly packumentCache full:https://registry.npmjs.org/tar-stream set size:undefined disposed:false
+118 silly placeDep ROOT deep-extend@0.6.0 OK for: rc@1.2.8 want: ^0.6.0
+119 silly placeDep ROOT ini@1.3.8 OK for: rc@1.2.8 want: ~1.3.0
+120 silly placeDep node_modules/rc strip-json-comments@2.0.1 OK for: rc@1.2.8 want: ~2.0.1
+121 silly placeDep ROOT simple-concat@1.0.1 OK for: simple-get@4.0.1 want: ^1.0.0
+122 silly placeDep node_modules/tar-fs chownr@1.1.4 OK for: tar-fs@2.1.4 want: ^1.1.1
+123 silly placeDep ROOT tar-stream@2.2.0 OK for: tar-fs@2.1.4 want: ^2.1.4
+124 silly fetch manifest fs-constants@^1.0.0
+125 silly packumentCache full:https://registry.npmjs.org/fs-constants cache-miss
+126 http fetch GET 200 https://registry.npmjs.org/fs-constants 252ms (cache miss)
+127 silly packumentCache full:https://registry.npmjs.org/fs-constants set size:undefined disposed:false
+128 silly placeDep ROOT fs-constants@1.0.0 OK for: tar-stream@2.2.0 want: ^1.0.0
+129 silly placeDep node_modules/prebuild-install semver@7.7.4 OK for: node-abi@3.87.0 want: ^7.3.5
+130 silly reify moves {}
+131 verbose stack Error: EPERM: operation not permitted, mkdir '/Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app_desktop/node_modules/@prisma/adapter-better-sqlite3'
+131 verbose stack     at async mkdir (node:internal/fs/promises:856:10)
+131 verbose stack     at async /usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:572:20
+131 verbose stack     at async Promise.allSettled (index 0)
+131 verbose stack     at async #reifyPackages (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:309:11)
+131 verbose stack     at async Arborist.reify (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:121:5)
+131 verbose stack     at async Install.exec (/usr/local/lib/node_modules/npm/lib/commands/install.js:151:5)
+131 verbose stack     at async Npm.exec (/usr/local/lib/node_modules/npm/lib/npm.js:208:9)
+131 verbose stack     at async module.exports (/usr/local/lib/node_modules/npm/lib/cli/entry.js:67:5)
+132 error code EPERM
+133 error syscall mkdir
+134 error path /Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app_desktop/node_modules/@prisma/adapter-better-sqlite3
+135 error errno -1
+136 error Error: EPERM: operation not permitted, mkdir '/Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app_desktop/node_modules/@prisma/adapter-better-sqlite3'
+136 error     at async mkdir (node:internal/fs/promises:856:10)
+136 error     at async /usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:572:20
+136 error     at async Promise.allSettled (index 0)
+136 error     at async #reifyPackages (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:309:11)
+136 error     at async Arborist.reify (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:121:5)
+136 error     at async Install.exec (/usr/local/lib/node_modules/npm/lib/commands/install.js:151:5)
+136 error     at async Npm.exec (/usr/local/lib/node_modules/npm/lib/npm.js:208:9)
+136 error     at async module.exports (/usr/local/lib/node_modules/npm/lib/cli/entry.js:67:5) {
+136 error   errno: -1,
+136 error   code: 'EPERM',
+136 error   syscall: 'mkdir',
+136 error   path: '/Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app_desktop/node_modules/@prisma/adapter-better-sqlite3'
+136 error }
+137 error
+137 error The operation was rejected by your operating system.
+137 error It is likely you do not have the permissions to access this file as the current user
+137 error
+137 error If you believe this might be a permissions issue, please double-check the
+137 error permissions of the file and its containing directories, or try running
+137 error the command again as root/Administrator.
+138 silly unfinished npm timer reify 1771576524226
+139 silly unfinished npm timer reify:createSparse 1771576526828
+140 verbose cwd /Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app
+141 verbose os Darwin 25.2.0
+142 verbose node v25.6.1
+143 verbose npm  v11.9.0
+144 notice
+144 notice New [33mminor[39m version of npm available! [33m11.9.0[39m -> [34m11.10.1[39m
+144 notice Changelog: [34mhttps://github.com/npm/cli/releases/tag/v11.10.1[39m
+144 notice To update run: [4mnpm install -g npm@11.10.1[24m
+144 notice  { force: true, Symbol(proc-log.meta): true }
+145 verbose exit -1
+146 verbose code -1
+147 error A complete log of this run can be found in: /Users/yairferber/Documents/Workspaces/Personal/teacher_schedule_app/.npm-cache-local/_logs/2026-02-20T08_35_23_889Z-debug-0.log

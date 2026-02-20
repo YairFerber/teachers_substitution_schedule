@@ -161,16 +161,43 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                     <div className="space-y-4">
                         <h4 className="font-semibold text-gray-700">Select Substitute:</h4>
                         <div className="max-h-60 overflow-y-auto border rounded divide-y">
-                            {availableTeachers.map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => setSelectedTeacher(t.id)}
-                                    className={`w-full text-left p-3 hover:bg-blue-50 flex justify-between items-center ${selectedTeacher === t.id ? 'bg-blue-100' : ''}`}
-                                >
-                                    <span>{t.firstName} {t.lastName}</span>
-                                    <span className="text-xs text-gray-500">{t.type}</span>
-                                </button>
-                            ))}
+                            {availableTeachers.map(t => {
+                                let bgClass = 'hover:bg-gray-50';
+                                let badgeClass = 'bg-gray-100 text-gray-600';
+
+                                if (t.status === 'FREE') {
+                                    bgClass = 'hover:bg-emerald-50';
+                                    badgeClass = 'bg-emerald-100 text-emerald-700';
+                                } else if (t.status === 'STAY') {
+                                    bgClass = 'hover:bg-amber-50';
+                                    badgeClass = 'bg-amber-100 text-amber-700';
+                                } else if (t.status === 'INDIVIDUAL') {
+                                    bgClass = 'hover:bg-purple-50';
+                                    badgeClass = 'bg-purple-100 text-purple-700';
+                                }
+
+                                const isOfficialSub = t.type === 'SUBSTITUTE';
+
+                                return (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setSelectedTeacher(t.id)}
+                                        className={`w-full text-left p-3 flex justify-between items-center transition-colors ${bgClass} ${selectedTeacher === t.id ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50' : ''}`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className={`font-medium ${isOfficialSub ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                                {t.firstName} {t.lastName}
+                                            </span>
+                                            {isOfficialSub && (
+                                                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded border border-indigo-200">מ\"מ</span>
+                                            )}
+                                        </div>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${badgeClass}`}>
+                                            {t.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                             {availableTeachers.length === 0 && (
                                 <div className="p-4 text-center text-gray-500">No available teachers found.</div>
                             )}

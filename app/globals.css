@@ -31,7 +31,9 @@ body {
   }
 
   #daily-grid-container,
-  #daily-grid-container * {
+  #daily-grid-container *,
+  #report-container,
+  #report-container * {
     visibility: visible;
   }
 
@@ -42,6 +44,14 @@ body {
     width: 100%;
     margin: 0;
     padding: 0;
+  }
+
+  #report-container {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    display: block !important;
   }
 
   /* Hide buttons, toolbars, and specific elements when printing */
@@ -86,7 +96,13 @@ body {
   .bg-red-500,
   .bg-green-500,
   .bg-yellow-100,
-  .bg-indigo-500 {
+  .bg-indigo-500,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-blue-100,
+  .bg-emerald-100,
+  .bg-purple-100,
+  .bg-amber-100 {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

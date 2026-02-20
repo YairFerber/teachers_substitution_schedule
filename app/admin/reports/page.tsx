@@ -51,6 +51,18 @@ export default function MonthlyReportPage() {
     // Sort by Date
     const sortedByDate = [...substitutions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    // Group by Date for visual grouping
+    const groupedByDate = substitutions.reduce((acc, sub) => {
+        const dateKey = format(new Date(sub.date), 'yyyy-MM-dd');
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(sub);
+        return acc;
+    }, {} as Record<string, SubstitutionReportItem[]>);
+
+    const sortedDateKeys = Object.keys(groupedByDate).sort();
+
     const handlePrint = () => {
         window.print();
     };
@@ -102,7 +114,7 @@ export default function MonthlyReportPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8 print:bg-white print:p-0">
+        <div id="report-container" className="min-h-screen bg-gray-50 p-8 print:bg-white print:p-0">
             <div className="max-w-6xl mx-auto">
                 {/* Header (Hidden on Print) */}
                 <div className="flex justify-between items-center mb-8 print:hidden">
@@ -200,41 +212,49 @@ export default function MonthlyReportPage() {
                                 </div>
                             ))
                         ) : (
-                            // Date View (Flat Table)
-                            <div className="bg-white rounded-lg shadow overflow-hidden print:shadow-none print:border border-gray-200 mb-8">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">מחליף/ה</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">שעה</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פרטים</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">במקום</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {sortedByDate.map((sub) => (
-                                            <tr key={sub.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {new Date(sub.date).toLocaleDateString('he-IL')}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                                                    {sub.substituteTeacher ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}` : 'Unassigned'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {sub.schedule.hourIndex}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {sub.schedule.subject} ({sub.schedule.class?.name})
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {sub.schedule.teacher.firstName} {sub.schedule.teacher.lastName}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            // Date View (Grouped by Date)
+                            sortedDateKeys.map((dateKey) => {
+                                const subs = groupedByDate[dateKey];
+                                const displayDate = new Date(dateKey).toLocaleDateString('he-IL');
+                                return (
+                                    <div key={dateKey} className="bg-white rounded-lg shadow overflow-hidden print:shadow-none print:border border-gray-200 mb-8 break-inside-avoid">
+                                        <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                                            <h2 className="text-lg font-bold text-gray-800">{displayDate}</h2>
+                                            <span className="text-sm font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                                {subs.length} items
+                                            </span>
+                                        </div>
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">מחליף/ה</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">שעה</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פרטים</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">במקום</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {subs.sort((a, b) => a.schedule.hourIndex - b.schedule.hourIndex).map((sub) => (
+                                                    <tr key={sub.id}>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                                                            {sub.substituteTeacher ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}` : 'Unassigned'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {sub.schedule.hourIndex}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {sub.schedule.subject} ({sub.schedule.class?.name})
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {sub.schedule.teacher.firstName} {sub.schedule.teacher.lastName}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                 )}

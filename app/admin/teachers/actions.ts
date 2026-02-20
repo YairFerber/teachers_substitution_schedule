@@ -25,7 +25,7 @@ export async function resetPin(userId: string) {
     return newPin;
 }
 
-export async function updateTeacher(teacherId: string, data: { firstName: string; lastName: string; email: string; phone: string }) {
+export async function updateTeacher(teacherId: string, data: { firstName: string; lastName: string; email: string; phone: string; username: string }) {
     const session = await auth();
     if (!session?.user || (session.user as any).role !== 'ADMIN') {
         throw new Error('Unauthorized');
@@ -41,9 +41,7 @@ export async function updateTeacher(teacherId: string, data: { firstName: string
         },
     });
 
-    // Also update User name/email/username if linked? 
-    // Usually good practice to keep them in sync if the teacher name changes.
-    // Let's find the user linked to this teacher.
+    // Also update User name/email/username if linked
     const linkedUser = await prisma.user.findFirst({
         where: { teacher: { id: teacherId } }
     });
@@ -52,8 +50,7 @@ export async function updateTeacher(teacherId: string, data: { firstName: string
             where: { id: linkedUser.id },
             data: {
                 name: `${data.firstName} ${data.lastName}`,
-                // username: `${data.firstName} ${data.lastName}`, // Changing username might break login if they don't know. Let's keep username stable or ask? 
-                // Let's just update the display name and email for now.
+                username: data.username,
                 email: data.email,
             }
         });

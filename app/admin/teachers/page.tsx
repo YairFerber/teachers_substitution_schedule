@@ -31,6 +31,7 @@ export default async function AdminTeachersPage() {
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PIN Code</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
@@ -43,7 +44,7 @@ export default async function AdminTeachersPage() {
                             ))}
                             {usersList.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No teachers found.</td>
+                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No teachers found.</td>
                                 </tr>
                             )}
                         </tbody>

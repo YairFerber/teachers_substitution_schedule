@@ -16,7 +16,10 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
 
     // Fetch Teacher, Schedule, Periods, AND Classes
     const [teacher, schedule, periods, classes] = await Promise.all([
-        prisma.teacher.findUnique({ where: { id } }),
+        prisma.teacher.findUnique({
+            where: { id },
+            include: { user: true }
+        }),
         prisma.schedule.findMany({
             where: { teacherId: id },
             include: {

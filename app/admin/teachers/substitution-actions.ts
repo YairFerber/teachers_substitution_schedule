@@ -85,7 +85,8 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
     const busySchedules = await prisma.schedule.findMany({
         where: {
             dayOfWeek,
-            hourIndex
+            hourIndex,
+            type: { in: ['REGULAR', 'MEETING'] }
         },
         select: { teacherId: true }
     });
@@ -111,8 +112,52 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
         if (s.substituteTeacherId) busyTeacherIds.add(s.substituteTeacherId);
     });
 
-    // Filter out busy teachers
-    const availableTeachers = allTeachers.filter((t: any) => !busyTeacherIds.has(t.id));
+    // 3. Get all schedules for this hour to identify Stay/Individual tags
+    const hourSchedules = await prisma.schedule.findMany({
+        where: { dayOfWeek, hourIndex },
+        select: { teacherId: true, type: true }
+    });
+
+    const teacherSchedules = new Map(hourSchedules.map(s => [s.teacherId, s.type]));
+
+    // Filter out busy teachers and enrich with status
+    const availableTeachers = allTeachers
+        .filter((t: any) => !busyTeacherIds.has(t.id))
+        .map((t: any) => {
+            const schedType = teacherSchedules.get(t.id);
+            let status = 'FREE';
+            let label = 'פנוי';
+
+            if (schedType === 'STAY') {
+                status = 'STAY';
+                label = 'שהייה';
+            } else if (schedType === 'INDIVIDUAL') {
+                status = 'INDIVIDUAL';
+                label = 'פרטני';
+            }
+
+            return {
+                ...t,
+                status,
+                label
+            };
+        });
+
+    // Sort: Official Substitutes first, then FREE, then STAY, then INDIVIDUAL
+    availableTeachers.sort((a, b) => {
+        // Priority for Official Substitutes
+        if (a.type === 'SUBSTITUTE' && b.type !== 'SUBSTITUTE') return -1;
+        if (a.type !== 'SUBSTITUTE' && b.type === 'SUBSTITUTE') return 1;
+
+        // Priority by status
+        const statusOrder: Record<string, number> = { 'FREE': 0, 'STAY': 1, 'INDIVIDUAL': 2 };
+        const orderA = statusOrder[a.status] ?? 99;
+        const orderB = statusOrder[b.status] ?? 99;
+
+        if (orderA !== orderB) return orderA - orderB;
+
+        return a.lastName.localeCompare(b.lastName);
+    });
 
     return availableTeachers;
 }

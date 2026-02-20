@@ -11,6 +11,9 @@ interface TeacherProfileCardProps {
         lastName: string;
         email: string;
         phone: string;
+        user?: {
+            username: string;
+        } | null;
     };
 }
 
@@ -23,6 +26,7 @@ export default function TeacherProfileCard({ teacher }: TeacherProfileCardProps)
         lastName: teacher.lastName,
         email: teacher.email,
         phone: teacher.phone,
+        username: teacher.user?.username || '',
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,6 +76,16 @@ export default function TeacherProfileCard({ teacher }: TeacherProfileCardProps)
                         />
                     </div>
                     <div>
+                        <label className="block text-sm font-medium text-gray-700">Login Username</label>
+                        <input
+                            type="text"
+                            name="username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            className="mt-1 block w-full rounded-md border-2 border-blue-200 p-2 text-gray-900 bg-blue-50 focus:border-blue-500 focus:ring-0"
+                        />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium text-gray-700">Email</label>
                         <input
                             type="email"
@@ -111,6 +125,12 @@ export default function TeacherProfileCard({ teacher }: TeacherProfileCardProps)
                 <div>
                     <h2 className="text-2xl font-semibold text-gray-800 mb-2">{teacher.firstName} {teacher.lastName}</h2>
                     <div className="text-gray-600 grid grid-cols-2 gap-x-8 gap-y-2">
+                        <p className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">Username:</span>
+                            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono text-sm border border-blue-100">
+                                {teacher.user?.username || 'N/A'}
+                            </span>
+                        </p>
                         <p><span className="font-medium">Email:</span> {teacher.email}</p>
                         <p><span className="font-medium">Phone:</span> {teacher.phone}</p>
                         <p><span className="font-medium">Teacher ID:</span> {teacher.id}</p>
