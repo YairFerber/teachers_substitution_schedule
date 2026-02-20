@@ -61,10 +61,11 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
             const date = addDays(currentWeekStart, dayIndex);
 
             // Find existing substitution/status
-            const sub = substitutions.find(s =>
-                s.scheduleId === item.id &&
-                new Date(s.date).toDateString() === date.toDateString()
-            );
+            const sub = substitutions.find(s => {
+                const subDateStr = new Date(s.date).toISOString().split('T')[0];
+                const itemDateStr = date.toISOString().split('T')[0];
+                return s.scheduleId === item.id && subDateStr === itemDateStr;
+            });
 
             // Prepare slot info for modal
             setSelectedSlot({
@@ -101,10 +102,11 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
 
         const processed = schedule.map(item => {
             const itemDate = addDays(currentWeekStart, item.dayOfWeek);
-            const sub = substitutions.find(s =>
-                s.scheduleId === item.id &&
-                new Date(s.date).toDateString() === itemDate.toDateString()
-            );
+            const sub = substitutions.find(s => {
+                const subDateStr = new Date(s.date).toISOString().split('T')[0];
+                const itemDateStr = itemDate.toISOString().split('T')[0];
+                return s.scheduleId === item.id && subDateStr === itemDateStr;
+            });
 
             if (sub && sub.status === 'ABSENT') {
                 return { ...item, type: 'ABSENT_DISPLAY' as const, subject: 'ABSENT' };

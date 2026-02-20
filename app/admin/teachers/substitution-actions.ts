@@ -10,10 +10,10 @@ export async function markAbsence(scheduleId: string, date: Date) {
         throw new Error('Unauthorized');
     }
 
-    // Normalize date to ensure we match the "day" regardless of time component quirks
-    const searchDate = new Date(date);
-    const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
+    // Normalize date to UTC Midnight to prevent timezone shifting
+    const d = new Date(date);
+    const startOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 
     const existing = await prisma.substitution.findFirst({
         where: {
@@ -44,6 +44,7 @@ export async function markAbsence(scheduleId: string, date: Date) {
     }
 
     revalidatePath('/admin/teachers');
+    revalidatePath('/admin/teachers/[id]', 'page');
     revalidatePath('/admin/daily');
     return { success: true };
 }
@@ -71,10 +72,10 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
 
     const dayOfWeek = date.getDay(); // 0-6
 
-    // Normalize date for substitution check
-    const searchDate = new Date(date);
-    const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
+    // Normalize date to UTC Midnight for consistency
+    const d = new Date(date);
+    const startOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 
     // Get all teachers
     const allTeachers = await prisma.teacher.findMany({
@@ -177,6 +178,7 @@ export async function assignSubstitute(substitutionId: string, substituteTeacher
     });
 
     revalidatePath('/admin/teachers');
+    revalidatePath('/admin/teachers/[id]', 'page');
     revalidatePath('/admin/daily');
     return { success: true };
 }
@@ -233,9 +235,9 @@ export async function clearDailySubstitutions(teacherId: string, date: Date) {
         throw new Error('Unauthorized');
     }
 
-    const searchDate = new Date(date);
-    const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
+    const d = new Date(date);
+    const startOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 
     // Find all substitutions for this teacher on this day
     await prisma.substitution.deleteMany({

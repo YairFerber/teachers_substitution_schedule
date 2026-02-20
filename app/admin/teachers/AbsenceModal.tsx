@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { findAvailableTeachers, markAbsence, assignSubstitute, cancelAbsence } from './substitution-actions';
 
@@ -21,6 +22,7 @@ interface AbsenceModalProps {
 }
 
 export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: AbsenceModalProps) {
+    const router = useRouter();
     const [step, setStep] = useState<'VIEW' | 'ASSIGN'>('VIEW');
     const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -43,6 +45,7 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
         try {
             await markAbsence(slotInfo.scheduleId, slotInfo.date);
             onSuccess();
+            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
@@ -72,6 +75,7 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
         try {
             await assignSubstitute(slotInfo.substitutionId, selectedTeacher);
             onSuccess();
+            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
@@ -89,6 +93,7 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
         try {
             await cancelAbsence(slotInfo.substitutionId);
             onSuccess();
+            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
