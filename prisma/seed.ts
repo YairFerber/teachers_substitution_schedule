@@ -1,14 +1,16 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
+import { createClient } from '@libsql/client';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 
-const adapter = new PrismaLibSql({
+const libsql = createClient({
     url: process.env.DATABASE_URL!,
 });
+const adapter = new PrismaLibSQL(libsql);
 const prisma = new PrismaClient({ adapter });
 
 console.log("Starting seed script...");
