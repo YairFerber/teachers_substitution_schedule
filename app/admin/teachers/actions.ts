@@ -31,13 +31,16 @@ export async function updateTeacher(teacherId: string, data: { firstName: string
         throw new Error('Unauthorized');
     }
 
+    const safeEmail = data.email && data.email.trim() !== '' ? data.email.trim() : null;
+    const safePhone = data.phone && data.phone.trim() !== '' ? data.phone.trim() : null;
+
     await prisma.teacher.update({
         where: { id: teacherId },
         data: {
             firstName: data.firstName,
             lastName: data.lastName,
-            email: data.email,
-            phone: data.phone,
+            email: safeEmail,
+            phone: safePhone,
         },
     });
 
@@ -51,7 +54,7 @@ export async function updateTeacher(teacherId: string, data: { firstName: string
             data: {
                 name: `${data.firstName} ${data.lastName}`,
                 username: data.username,
-                email: data.email,
+                email: safeEmail,
             }
         });
     }

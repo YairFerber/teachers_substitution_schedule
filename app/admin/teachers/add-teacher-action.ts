@@ -17,13 +17,16 @@ export async function addTeacher(data: {
         throw new Error('Unauthorized');
     }
 
+    const safeEmail = data.email && data.email.trim() !== '' ? data.email.trim() : null;
+    const safePhone = data.phone && data.phone.trim() !== '' ? data.phone.trim() : null;
+
     // 1. Create Teacher Record
     const teacher = await prisma.teacher.create({
         data: {
             firstName: data.firstName,
             lastName: data.lastName,
-            email: data.email,
-            phone: data.phone,
+            email: safeEmail,
+            phone: safePhone,
             type: data.type,
         }
     });
@@ -49,7 +52,7 @@ export async function addTeacher(data: {
         data: {
             name: `${data.firstName} ${data.lastName}`,
             username: finalUsername,
-            email: data.email, // Can be null or duplicate? Schema says unique.
+            email: safeEmail, // Can be null or duplicate? Schema says unique.
             // If email is shared or fake, might be issue.
             // Let's use the provided email. If empty, null.
             password: hashedPin,

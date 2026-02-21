@@ -44,3 +44,10 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Local Database
+dev.db
+dev.db-journal
+
+# Temp Caches
+.npm-cache-temp/
