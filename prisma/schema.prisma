@@ -117,18 +117,22 @@ model Schedule {
 }
 
 model Substitution {
-  id                String   @id @default(cuid())
-  scheduleId        String
-  schedule          Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  scheduleId          String
+  schedule            Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   
   substituteTeacherId String?
   substituteTeacher   Teacher? @relation(fields: [substituteTeacherId], references: [id])
   
-  date              DateTime
-  status            String   @default("ABSENT") // ABSENT (Red), COVERED (Green), PENDING (Yellow - if used for request flow)
+  date                DateTime
+  status              String   @default("ABSENT") // ABSENT (Red), COVERED (Green), PENDING (Yellow - if used for request flow)
   
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  absenceType         String?  // SICK, VACATION, WORK_OUT, NONE
+  isExtra             Boolean  @default(false)
+  notes               String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@unique([scheduleId, date])
 }

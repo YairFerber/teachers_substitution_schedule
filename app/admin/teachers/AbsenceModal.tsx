@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { findAvailableTeachers, markAbsence, assignSubstitute, cancelAbsence } from './substitution-actions';
+import { findAvailableTeachers, markAbsence, assignSubstitute, cancelAbsence, toggleExtraClass } from './substitution-actions';
 
 interface AbsenceModalProps {
     isOpen: boolean;
     onClose: () => void;
     slotInfo: {
-        scheduleId: string;
+        teacherId?: string;
+        scheduleId?: string;
         date: Date;
         hourIndex: number;
         dayName: string;
@@ -17,6 +18,8 @@ interface AbsenceModalProps {
         currentStatus?: string; // ABSENT, COVERED, or undefined (Normal)
         substituteName?: string;
         substitutionId?: string;
+        isExtra?: boolean;
+        absenceType?: string;
     };
     onSuccess: () => void;
 }
@@ -27,6 +30,8 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
     const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState('');
+    const [absenceType, setAbsenceType] = useState('SICK');
+    const [extraNotes, setExtraNotes] = useState('');
 
     // Reset when opening
     useEffect(() => {
@@ -40,16 +45,49 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
     if (!isOpen) return null;
 
     const handleMarkAbsence = async () => {
+        if (!slotInfo.scheduleId) return;
         if (!confirm('Mark teacher as ABSENT for this class?')) return;
         setLoading(true);
         try {
-            await markAbsence(slotInfo.scheduleId, slotInfo.date);
+            await markAbsence(slotInfo.scheduleId, slotInfo.date, absenceType);
             onSuccess();
             router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
             alert('Failed to mark absence');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddExtraClass = async () => {
+        if (!slotInfo.teacherId) return;
+        setLoading(true);
+        try {
+            await toggleExtraClass(slotInfo.teacherId, slotInfo.date, slotInfo.hourIndex, true, extraNotes);
+            onSuccess();
+            router.refresh();
+            onClose();
+        } catch (e) {
+            console.error(e);
+            alert('Failed to add extra class');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRemoveExtraClass = async () => {
+        if (!slotInfo.teacherId) return;
+        setLoading(true);
+        try {
+            await toggleExtraClass(slotInfo.teacherId, slotInfo.date, slotInfo.hourIndex, false, '');
+            onSuccess();
+            router.refresh();
+            onClose();
+        } catch (e) {
+            console.error(e);
+            alert('Failed to remove extra class');
         } finally {
             setLoading(false);
         }
@@ -114,33 +152,83 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                 {step === 'VIEW' && (
                     <div className="space-y-4">
                         {!slotInfo.currentStatus && (
-                            <button
-                                onClick={handleMarkAbsence}
-                                disabled={loading}
-                                className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
-                            >
-                                Mark as Absent (Red)
-                            </button>
+                            <div className="bg-gray-50 border p-4 rounded-lg space-y-6" dir="rtl">
+                                <div>
+                                    <h4 className="font-semibold mb-2 text-gray-700">סימון היעדרות במערכת</h4>
+                                    <select
+                                        value={absenceType}
+                                        onChange={(e) => setAbsenceType(e.target.value)}
+                                        className="w-full mb-3 border border-gray-300 rounded p-2 text-sm"
+                                    >
+                                        <option value="SICK">מחלה (Sick)</option>
+                                        <option value="VACATION">חופשה (Vacation)</option>
+                                        <option value="WORK_OUT">עבודה מחוץ לביה"ס (Work out of school)</option>
+                                    </select>
+                                    <button
+                                        onClick={handleMarkAbsence}
+                                        disabled={loading || !slotInfo.scheduleId}
+                                        className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
+                                    >
+                                        סמן כהיעדרות
+                                    </button>
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <h4 className="font-semibold mb-2 text-gray-700">הוספת שעה נוספת (מילוי מקום חופשי)</h4>
+                                    <input
+                                        type="text"
+                                        placeholder="הערות למילוי המקום (אופציונלי)"
+                                        value={extraNotes}
+                                        onChange={(e) => setExtraNotes(e.target.value)}
+                                        className="w-full mb-3 border border-gray-300 rounded p-2 text-sm"
+                                    />
+                                    <button
+                                        onClick={handleAddExtraClass}
+                                        disabled={loading}
+                                        className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
+                                    >
+                                        שייך שעה נוספת
+                                    </button>
+                                </div>
+                            </div>
                         )}
 
-                        {slotInfo.currentStatus === 'ABSENT' && (
+                        {slotInfo.currentStatus === 'ABSENT' && !slotInfo.isExtra && (
                             <>
                                 <div className="p-3 bg-red-100 text-red-800 rounded text-center font-medium">
-                                    Current Status: ABSENT
+                                    סטטוס נוכחי: נעדר/ת
+                                    {slotInfo.absenceType === 'WORK_OUT' && <span className="block text-xs font-normal">עבודה מחוץ לביה"ס</span>}
+                                    {slotInfo.absenceType === 'VACATION' && <span className="block text-xs font-normal">חופשה</span>}
+                                    {slotInfo.absenceType === 'SICK' && <span className="block text-xs font-normal">מחלה</span>}
                                 </div>
                                 <button
                                     onClick={handleFetchTeachers}
                                     disabled={loading}
                                     className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                                 >
-                                    Assign Substitute
+                                    שבץ מחליף/ה
                                 </button>
                                 <button
                                     onClick={handleCancelAbsence}
                                     disabled={loading}
                                     className="w-full py-2 text-gray-600 hover:bg-gray-100 rounded"
                                 >
-                                    Cancel Absence
+                                    בטל היעדרות
+                                </button>
+                            </>
+                        )}
+
+                        {slotInfo.currentStatus === 'COVERED' && slotInfo.isExtra && slotInfo.substituteName === undefined && (
+                            <>
+                                <div className="p-3 bg-purple-100 text-purple-800 rounded text-center font-medium">
+                                    סטטוס: שעה נוספת
+                                </div>
+                                <button
+                                    onClick={handleRemoveExtraClass}
+                                    disabled={loading}
+                                    className="w-full py-2 text-purple-600 hover:bg-purple-50 rounded"
+                                >
+                                    מחק שעה נוספת
                                 </button>
                             </>
                         )}

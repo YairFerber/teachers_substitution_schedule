@@ -54,31 +54,30 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
             setIsEditModalOpen(true);
         } else {
             // Weekly/Absence Mode
-            // Cannot mark absence on empty slot (for now, unless needed)
-            if (!item) return;
-
             // Find specific date
             const localDate = addDays(currentWeekStart, dayIndex);
             // Create a pure YYYY-MM-DD string, then parse it back to Date so it equates to UTC midnight in the browser
             const dateStr = format(localDate, 'yyyy-MM-dd');
             const pureUtcDate = new Date(dateStr);
 
-            // Find existing substitution/status
             const sub = substitutions.find(s => {
                 const subDateStr = new Date(s.date).toISOString().split('T')[0];
-                return s.scheduleId === item.id && subDateStr === dateStr;
+                return (item && s.scheduleId === item.id && subDateStr === dateStr) || (!item && s.isExtra && s.schedule?.hourIndex === hourIndex && subDateStr === dateStr && s.substituteTeacherId === teacherId);
             });
 
             // Prepare slot info for modal
             setSelectedSlot({
-                scheduleId: item.id,
+                teacherId: teacherId, // Added
+                scheduleId: item?.id, // Can be undefined now
                 date: pureUtcDate,
                 hourIndex: hourIndex,
                 dayName: format(localDate, 'EEEE'),
                 hourTime: periods.find(p => p.index === hourIndex)?.startTime || hourIndex,
                 currentStatus: sub?.status, // ABSENT, COVERED
                 substituteName: sub?.substituteTeacher ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}` : undefined,
-                substitutionId: sub?.id
+                substitutionId: sub?.id,
+                isExtra: sub?.isExtra,
+                absenceType: sub?.absenceType
             });
             setIsAbsenceModalOpen(true);
         }
@@ -109,18 +108,29 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
                 return s.scheduleId === item.id && subDateStr === itemDateStr;
             });
 
+            let finalItem = { ...item };
+
             if (sub && sub.status === 'ABSENT') {
-                return { ...item, type: 'ABSENT_DISPLAY' as const, subject: 'ABSENT' };
+                finalItem = { ...finalItem, type: 'ABSENT_DISPLAY' as const, subject: 'ABSENT' };
             }
             if (sub && sub.status === 'COVERED' && sub.schedule?.teacherId === teacherId) {
                 // Return new style: Red BG with Green indicator
-                return { ...item, type: 'COVERED_ABSENCE_DISPLAY' as const, subject: `Cover: ${sub.substituteTeacher?.firstName}`, className: 'bg-green-100' };
+                finalItem = { ...finalItem, type: 'COVERED_ABSENCE_DISPLAY' as any, subject: `Cover: ${sub.substituteTeacher?.firstName}` };
             }
-            return item;
+            if (sub && sub.isExtra && sub.substituteTeacherId === teacherId) {
+                // If the original teacher is doing extra here, append badge
+                finalItem = { ...finalItem, subject: finalItem.subject ? `${finalItem.subject} (+ Extra)` : 'Extra Class' };
+            }
+            return finalItem;
         });
 
-        // Add Covers (where I am the substitute)
-        const covers = substitutions.filter(s => s.substituteTeacherId === teacherId && s.status === 'COVERED');
+        // Add Covers (where I am the substitute or doing an ad-hoc extra class)
+        // Note: we exclude covers that map to my *own* regular schedule because those are handled above
+        const covers = substitutions.filter(s =>
+            s.substituteTeacherId === teacherId &&
+            (s.status === 'COVERED' || s.isExtra) &&
+            s.schedule?.teacherId !== teacherId
+        );
         const coverItems = covers.map(cover => ({
             id: cover.id,
             teacherId: teacherId, // It's effectively mine now
@@ -129,11 +139,30 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
             classId: cover.schedule.classId,
             class: cover.schedule.class,
             subject: `Sub: ${cover.schedule.subject || 'Class'} (${cover.schedule.teacher?.lastName})`,
-            type: 'COVERED_DISPLAY' as const, // Subs still see Green
+            type: (cover.isExtra ? 'STAY' : 'COVERED_DISPLAY') as any, // Use STAY color maybe or custom
             substitutions: [cover]
         }));
 
-        return [...processed, ...coverItems];
+        // Add ad-hoc extra classes (where we created a FREE schedule just to hold the substitution)
+        const adhocExtras = substitutions.filter(s =>
+            s.substituteTeacherId === teacherId &&
+            s.isExtra &&
+            s.schedule?.teacherId === teacherId &&
+            s.schedule?.type === 'FREE'
+        );
+        const adhocItems = adhocExtras.map(extra => ({
+            id: extra.id,
+            teacherId: teacherId,
+            dayOfWeek: extra.schedule.dayOfWeek,
+            hourIndex: extra.schedule.hourIndex,
+            classId: extra.schedule.classId,
+            class: extra.schedule.class,
+            subject: `Extra: ${extra.notes || 'Ad-hoc'}`,
+            type: 'EXTRA_CLASS_DISPLAY' as any,
+            substitutions: [extra]
+        }));
+
+        return [...processed, ...coverItems, ...adhocItems];
     }, [schedule, substitutions, viewMode, currentWeekStart, teacherId]);
 
 

@@ -18,10 +18,7 @@ export async function getMonthlySubstitutions(date: Date) {
             date: {
                 gte: start,
                 lte: end
-            },
-            status: 'COVERED' // Only show covered substitutions in report? Or all? User said "full monthly substitution report", implying active ones. I'll stick to COVERED for now as "Who worked".
-            // Actually, maybe show ABSENT too if they want to see unfilled? "Grouped by Substitute" implies successful subs.
-            // Let's filter for substituteTeacherId not null.
+            }
         },
         include: {
             substituteTeacher: true,

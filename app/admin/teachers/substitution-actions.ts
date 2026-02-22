@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 
-export async function markAbsence(scheduleId: string, date: Date) {
+export async function markAbsence(scheduleId: string, date: Date, absenceType: string = 'SICK') {
     const session = await auth();
     if (!session?.user || (session.user as any).role !== 'ADMIN') {
         throw new Error('Unauthorized');
@@ -30,7 +30,9 @@ export async function markAbsence(scheduleId: string, date: Date) {
             where: { id: existing.id },
             data: {
                 status: 'ABSENT',
-                substituteTeacherId: null
+                substituteTeacherId: null,
+                absenceType,
+                isExtra: false
             }
         });
     } else {
@@ -38,7 +40,9 @@ export async function markAbsence(scheduleId: string, date: Date) {
             data: {
                 scheduleId,
                 date: startOfDay, // Save as standardized start of day
-                status: 'ABSENT'
+                status: 'ABSENT',
+                absenceType,
+                isExtra: false
             }
         });
     }
@@ -160,7 +164,7 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
     return availableTeachers;
 }
 
-export async function assignSubstitute(substitutionId: string, substituteTeacherId: string) {
+export async function assignSubstitute(substitutionId: string, substituteTeacherId: string, isExtra: boolean = false) {
     const session = await auth();
     if (!session?.user || (session.user as any).role !== 'ADMIN') {
         throw new Error('Unauthorized');
@@ -170,9 +174,61 @@ export async function assignSubstitute(substitutionId: string, substituteTeacher
         where: { id: substitutionId },
         data: {
             substituteTeacherId,
-            status: 'COVERED'
+            status: 'COVERED',
+            isExtra
         }
     });
+
+    revalidatePath('/', 'layout');
+    return { success: true };
+}
+
+export async function toggleExtraClass(teacherId: string, date: Date, hourIndex: number, isExtra: boolean, notes: string = '') {
+    const session = await auth();
+    if (!session?.user || (session.user as any).role !== 'ADMIN') {
+        throw new Error('Unauthorized');
+    }
+
+    const dayOfWeek = date.getDay();
+    const d = new Date(date);
+    const startOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+
+    // Find or create schedule
+    let schedule = await prisma.schedule.findUnique({
+        where: { teacherId_dayOfWeek_hourIndex: { teacherId, dayOfWeek, hourIndex } }
+    });
+
+    if (!schedule) {
+        schedule = await prisma.schedule.create({
+            data: { teacherId, dayOfWeek, hourIndex, type: 'FREE', subject: 'Ad-hoc' }
+        });
+    }
+
+    const existing = await prisma.substitution.findFirst({
+        where: { scheduleId: schedule.id, date: startOfDay }
+    });
+
+    if (existing) {
+        await prisma.substitution.update({
+            where: { id: existing.id },
+            data: { isExtra, notes, substituteTeacherId: teacherId, status: isExtra ? 'COVERED' : existing.status }
+        });
+        // If we turned OFF extra and it was just a dummy for tracking:
+        if (!isExtra && existing.status === 'COVERED' && existing.substituteTeacherId === teacherId) {
+            await prisma.substitution.delete({ where: { id: existing.id } });
+        }
+    } else if (isExtra) {
+        await prisma.substitution.create({
+            data: {
+                scheduleId: schedule.id,
+                date: startOfDay,
+                status: 'COVERED',
+                isExtra: true,
+                notes,
+                substituteTeacherId: teacherId
+            }
+        });
+    }
 
     revalidatePath('/', 'layout');
     return { success: true };

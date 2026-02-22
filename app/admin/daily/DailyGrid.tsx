@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition } from 'react';
 import { format, addDays, subDays, parseISO, getDay } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import DailySubSelector from './DailySubSelector';
-import { markAbsence, assignSubstitute, cancelAbsence, clearDailySubstitutions } from '@/app/admin/teachers/substitution-actions';
+import { markAbsence, assignSubstitute, cancelAbsence, clearDailySubstitutions, toggleExtraClass } from '@/app/admin/teachers/substitution-actions';
 
 interface Teacher {
     id: string;
@@ -30,6 +30,9 @@ interface Substitution {
     date: Date;
     substituteTeacherId: string | null;
     status: string;
+    isExtra?: boolean;
+    notes?: string;
+    absenceType?: string;
     schedule?: Schedule; // Now included from server
 }
 
@@ -182,6 +185,11 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
 
     const onCancel = async (subId: string) => {
         await cancelAbsence(subId);
+        router.refresh();
+    };
+
+    const onToggleExtraClass = async (teacherId: string, hourIndex: number, isExtra: boolean) => {
+        await toggleExtraClass(teacherId, new Date(internalDate), hourIndex, isExtra, 'Added from Daily Grid');
         router.refresh();
     };
 
@@ -367,34 +375,52 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                         </td>
                                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(periodIndex => {
                                             const schedule = initialSchedules.find(s => s.teacherId === teacherId && s.hourIndex === periodIndex);
-                                            const sub = schedule ? initialSubstitutions.find(s => s.scheduleId === schedule.id) : null;
+                                            const sub = initialSubstitutions.find(s => {
+                                                if (schedule && s.scheduleId === schedule.id) return true;
+                                                if (s.isExtra && s.substituteTeacherId === teacherId) {
+                                                    const h = s.schedule ? s.schedule.hourIndex : initialSchedules.find(sch => sch.id === s.scheduleId)?.hourIndex;
+                                                    return h === periodIndex;
+                                                }
+                                                return false;
+                                            });
 
                                             const isSelected = selectedCell?.teacherId === teacherId && selectedCell?.hourIndex === periodIndex;
 
                                             return (
                                                 <td key={periodIndex} className="px-1 py-1 h-20 text-center align-top border-l border-gray-50 last:border-none relative group overflow-visible">
 
-                                                    {schedule && (
+                                                    {(schedule || sub) ? (
                                                         <div
                                                             onClick={() => {
-                                                                if (sub) {
+                                                                if (sub && !sub.isExtra) {
                                                                     // If already sub/absent, toggle selection to change sub?
                                                                     setSelectedCell(isSelected ? null : { teacherId, hourIndex: periodIndex });
-                                                                } else {
+                                                                } else if (!sub) {
                                                                     // Mark absent
-                                                                    if (schedule.classId || schedule.subject) onMarkAbsent(schedule.id);
+                                                                    if (schedule && (schedule.classId || schedule.subject)) onMarkAbsent(schedule.id);
                                                                 }
                                                             }}
-                                                            className={`w-full h-full p-1 rounded cursor-pointer flex flex-col justify-between items-center text-xs transition-colors border
+                                                            className={`w-full h-full p-1 rounded cursor-pointer flex flex-col justify-between items-center text-xs transition-colors border relative group/menu
                                                                 ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-200 z-30' : 'border-transparent hover:bg-gray-100'}
                                                             `}
                                                         >
+                                                            {/* Extra Class Hover Btn */}
+                                                            {!sub?.isExtra && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); onToggleExtraClass(teacherId, periodIndex, true); }}
+                                                                    className="absolute -top-2 -left-2 bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover/menu:opacity-100 shadow-md transition-opacity z-40 text-[10px]"
+                                                                    title="הוסף שעה נוספת"
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            )}
+
                                                             {sub ? (
                                                                 <div className={`w-full p-1 rounded text-white font-bold text-[10px] flex justify-between items-center group/cancel
-                                                                        ${sub.status === 'ABSENT' ? 'bg-red-500' : 'bg-green-500'}
+                                                                        ${sub.status === 'ABSENT' ? 'bg-red-500' : sub.isExtra ? 'bg-purple-500' : 'bg-green-500'}
                                                                     `}>
                                                                     <span className="truncate">
-                                                                        {sub.status === 'ABSENT' ? 'נעדר' :
+                                                                        {sub.status === 'ABSENT' ? 'נעדר' : sub.isExtra ? 'שעה נוספת' :
                                                                             (() => {
                                                                                 const t = allTeachers.find(at => at.id === sub.substituteTeacherId);
                                                                                 return t ? t.lastName : 'מוחלף';
@@ -404,7 +430,9 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            if (confirm('האם לבטל השמה זו?')) {
+                                                                            if (sub.isExtra) {
+                                                                                onToggleExtraClass(teacherId, periodIndex, false);
+                                                                            } else if (confirm('האם לבטל השמה זו?')) {
                                                                                 onCancel(sub.id);
                                                                             }
                                                                         }}
@@ -417,27 +445,25 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                             ) : (
                                                                 <div className="w-full text-right">
                                                                     {/* Hidden button to mark absent */}
-                                                                    {(schedule.classId || schedule.subject) && <span className="text-gray-300 opacity-0 group-hover:opacity-100 text-[10px]">סמן</span>}
+                                                                    {schedule && (schedule.classId || schedule.subject) && <span className="text-gray-300 opacity-0 group-hover:opacity-100 text-[10px]">סמן</span>}
                                                                 </div>
                                                             )}
 
-                                                            <div className="w-full truncate text-gray-700 font-semibold">{schedule.subject}</div>
-                                                            <div className="w-full truncate text-gray-500">{schedule.class?.name}</div>
+                                                            <div className="w-full truncate text-gray-700 font-semibold">{schedule?.subject}</div>
+                                                            <div className="w-full truncate text-gray-500">{schedule?.class?.name}</div>
 
-                                                            {schedule.type !== 'REGULAR' && (
+                                                            {schedule && schedule.type !== 'REGULAR' && (
                                                                 <div className="text-[9px] bg-yellow-100 text-yellow-800 rounded px-1 mt-auto">
                                                                     {schedule.type === 'STAY' ? 'שהייה' : schedule.type === 'INDIVIDUAL' ? 'פרטני' : 'אחר'}
                                                                 </div>
                                                             )}
 
                                                             {/* Selector Dropdown */}
-                                                            {isSelected && sub && (
+                                                            {isSelected && sub && !sub.isExtra && (
                                                                 <DailySubSelector
                                                                     hourIndex={periodIndex}
                                                                     allTeachers={allTeachers}
-                                                                    // Pass ALL schedules for this hour so selector can check type (Stay/Individual)
                                                                     schedulesAtHour={initialSchedules.filter(s => s.hourIndex === periodIndex)}
-                                                                    // Pass substitutions that block teachers
                                                                     subsAtHour={initialSubstitutions.filter(s => {
                                                                         const h = s.schedule ? s.schedule.hourIndex : initialSchedules.find(sch => sch.id === s.scheduleId)?.hourIndex;
                                                                         return h === periodIndex;
@@ -446,6 +472,16 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                     onClose={() => setSelectedCell(null)}
                                                                 />
                                                             )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-full h-full p-1 rounded hover:bg-gray-100 transition-colors relative group/empty">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onToggleExtraClass(teacherId, periodIndex, true); }}
+                                                                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover/empty:opacity-100 shadow-md transition-opacity text-xs"
+                                                                title="הוסף שעה נוספת"
+                                                            >
+                                                                +
+                                                            </button>
                                                         </div>
                                                     )}
                                                 </td>
