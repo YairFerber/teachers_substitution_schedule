@@ -218,32 +218,33 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                             </>
                         )}
 
-                        {slotInfo.currentStatus === 'COVERED' && slotInfo.isExtra && slotInfo.substituteName === undefined && (
+                        {slotInfo.currentStatus === 'COVERED' && slotInfo.isExtra && (
                             <>
                                 <div className="p-3 bg-purple-100 text-purple-800 rounded text-center font-medium">
                                     סטטוס: שעה נוספת
+                                    {slotInfo.substituteName && <span className="block text-xs font-normal">ממלא מקום: {slotInfo.substituteName}</span>}
                                 </div>
                                 <button
                                     onClick={handleRemoveExtraClass}
                                     disabled={loading}
-                                    className="w-full py-2 text-purple-600 hover:bg-purple-50 rounded"
+                                    className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold shadow-sm"
                                 >
                                     מחק שעה נוספת
                                 </button>
                             </>
                         )}
 
-                        {slotInfo.currentStatus === 'COVERED' && (
+                        {slotInfo.currentStatus === 'COVERED' && !slotInfo.isExtra && (
                             <>
                                 <div className="p-3 bg-green-100 text-green-800 rounded text-center font-medium">
-                                    Covered by: {slotInfo.substituteName}
+                                    ממלא מקום: {slotInfo.substituteName}
                                 </div>
                                 <button
-                                    onClick={handleCancelAbsence} // Or handleUnassign
+                                    onClick={handleCancelAbsence}
                                     disabled={loading}
-                                    className="w-full py-2 text-red-600 hover:bg-red-50 rounded"
+                                    className="w-full py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 font-semibold"
                                 >
-                                    Remove Substitute / Cancel
+                                    בטל השמה / החזר למצב רגיל
                                 </button>
                             </>
                         )}

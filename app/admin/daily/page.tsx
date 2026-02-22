@@ -68,7 +68,12 @@ export default async function DailySubstitutionPage({
             }
         },
         include: {
-            schedule: true, // Needed to know which hour is covered
+            schedule: {
+                include: {
+                    teacher: true
+                }
+            },
+            substituteTeacher: true,
         }
     });
 

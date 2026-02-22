@@ -34,6 +34,7 @@ interface Substitution {
     notes?: string;
     absenceType?: string;
     schedule?: Schedule; // Now included from server
+    substituteTeacher?: { firstName: string; lastName: string };
 }
 
 interface DailyGridProps {
@@ -424,23 +425,16 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                         ${sub.status === 'ABSENT' ? 'bg-red-500' : sub.isExtra ? 'bg-purple-500' : 'bg-green-500'}
                                                                     `}>
                                                                     <span className="truncate">
-                                                                        {sub.status === 'ABSENT' ? 'נעדר' : sub.isExtra ? 'שעה נוספת' :
-                                                                            (() => {
-                                                                                const t = allTeachers.find(at => at.id === sub.substituteTeacherId);
-                                                                                return t ? t.lastName : 'מוחלף';
-                                                                            })()
-                                                                        }
+                                                                        {sub.status === 'ABSENT' ? 'נעדר' : sub.isExtra ? 'שעה נוספת' : (sub.substituteTeacher?.lastName || 'מוחלף')}
                                                                     </span>
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            if (sub.isExtra) {
-                                                                                onToggleExtraClass(teacherId, periodIndex, false);
-                                                                            } else if (confirm('האם לבטל השמה זו?')) {
+                                                                            if (confirm('האם לבטל השמה/שעה נוספת זו?')) {
                                                                                 onCancel(sub.id);
                                                                             }
                                                                         }}
-                                                                        className="opacity-0 group-hover/cancel:opacity-100 hover:text-red-200 transition-opacity ml-1"
+                                                                        className="opacity-40 group-hover/cancel:opacity-100 hover:text-red-200 transition-opacity ml-1"
                                                                         title="בטל השמה/היעדרות"
                                                                     >
                                                                         ✕
