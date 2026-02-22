@@ -10,7 +10,7 @@ interface SubstitutionReportItem {
     date: Date;
     status: string;
     isExtra?: boolean;
-    absenceType?: string;
+    absenceType?: string | null;
     substituteTeacherId?: string | null;
     notes?: string | null;
     schedule: {
