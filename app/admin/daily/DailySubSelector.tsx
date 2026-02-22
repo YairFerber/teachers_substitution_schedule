@@ -65,29 +65,26 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
     // User asked to see: Free, In School (Stay), Private (Individual)
 
     const candidates = processed.filter(p =>
-        ['FREE', 'STAY', 'INDIVIDUAL'].includes(p.status)
+        ['FREE', 'STAY', 'INDIVIDUAL', 'BUSY_CLASS'].includes(p.status)
     );
 
     // Sort:
-    // 1. Valid Substitute Teachers (Type=SUBSTITUTE) who are FREE first?
-    // 2. Then regular Free
-    // 3. Then Stay/Individual
+    // 1. STAY (שהייה)
+    // 2. INDIVIDUAL (פרטני)
+    // 3. Official Substitutes who are FREE (מ"מ)
+    // 4. Regular FREE (פנוי)
+    // 5. BUSY_CLASS (בשיעור)
 
     candidates.sort((a, b) => {
-        // Priority 1: Official Substitutes who are Free
-        const aIsSub = a.teacher.type === 'SUBSTITUTE';
-        const bIsSub = b.teacher.type === 'SUBSTITUTE';
-        if (aIsSub && !bIsSub) return -1;
-        if (!aIsSub && bIsSub) return 1;
-
-        // Priority 2: Status (Free > Stay > Individual)
-        const score = (s: string) => {
-            if (s === 'FREE') return 0;
-            if (s === 'STAY') return 1;
-            if (s === 'INDIVIDUAL') return 2;
+        const score = (p: typeof candidates[0]) => {
+            if (p.status === 'STAY') return 1;
+            if (p.status === 'INDIVIDUAL') return 2;
+            if (p.status === 'FREE' && p.teacher.type === 'SUBSTITUTE') return 3;
+            if (p.status === 'FREE') return 4;
+            if (p.status === 'BUSY_CLASS') return 5;
             return 9;
         };
-        return score(a.status) - score(b.status);
+        return score(a) - score(b);
     });
 
     // Close on click outside
@@ -132,6 +129,9 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
                         } else if (status === 'INDIVIDUAL') {
                             bgClass = 'hover:bg-purple-50';
                             badgeClass = 'bg-purple-100 text-purple-700'; // Purple
+                        } else if (status === 'BUSY_CLASS') {
+                            bgClass = 'hover:bg-rose-50 opacity-70';
+                            badgeClass = 'bg-rose-100 text-rose-700'; // Red
                         }
 
                         // Special highlight for Official Substitutes

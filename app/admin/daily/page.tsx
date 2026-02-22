@@ -29,8 +29,8 @@ export default async function DailySubstitutionPage({
         // Force noon to avoid timezone rolling to previous day
         targetDate = new Date(params.date + 'T12:00:00');
     } else {
-        targetDate = addDays(new Date(), 1);
-        // Also ensure noon for stability if using default
+        // Default to Today!
+        targetDate = new Date();
         targetDate.setHours(12, 0, 0, 0);
     }
 
@@ -39,13 +39,12 @@ export default async function DailySubstitutionPage({
 
     console.log(`[DailyPage] Date: ${dateStr}, DayOfWeek: ${dayOfWeek}`);
 
-    // DB Date Range (UTC safe)
-    // We want the whole day of 'dateStr'
-    // DB Date Range (Use local start/end to match how it's saved in markAbsence)
-    const start = startOfDay(targetDate);
-    const end = endOfDay(targetDate);
+    // DB Date Range (Strict UTC match to align with substitution-actions.ts)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
-    console.log(`[DailyPage] Querying range in Local Time: ${format(start, 'yyyy-MM-dd HH:mm:ss')} to ${format(end, 'yyyy-MM-dd HH:mm:ss')}`);
+    console.log(`[DailyPage] Querying range in UTC: ${start.toISOString()} to ${end.toISOString()}`);
 
     // 1. Fetch All Teachers
     const allTeachers = await prisma.teacher.findMany({

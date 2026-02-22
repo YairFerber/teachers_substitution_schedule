@@ -33,11 +33,11 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
     useEffect(() => {
         if (viewMode === 'WEEKLY') {
             const fetchSubs = async () => {
-                const start = currentWeekStart;
-                const end = addDays(start, 6);
+                const startStr = format(currentWeekStart, 'yyyy-MM-dd');
+                const endStr = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
                 const [absences, covers] = await Promise.all([
-                    getTeacherAbsences(teacherId, start, end),
-                    getTeacherCovers(teacherId, start, end)
+                    getTeacherAbsences(teacherId, new Date(startStr), new Date(endStr)),
+                    getTeacherCovers(teacherId, new Date(startStr), new Date(endStr))
                 ]);
                 setSubstitutions([...absences, ...covers]);
             };
@@ -58,21 +58,23 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
             if (!item) return;
 
             // Find specific date
-            const date = addDays(currentWeekStart, dayIndex);
+            const localDate = addDays(currentWeekStart, dayIndex);
+            // Create a pure YYYY-MM-DD string, then parse it back to Date so it equates to UTC midnight in the browser
+            const dateStr = format(localDate, 'yyyy-MM-dd');
+            const pureUtcDate = new Date(dateStr);
 
             // Find existing substitution/status
             const sub = substitutions.find(s => {
                 const subDateStr = new Date(s.date).toISOString().split('T')[0];
-                const itemDateStr = date.toISOString().split('T')[0];
-                return s.scheduleId === item.id && subDateStr === itemDateStr;
+                return s.scheduleId === item.id && subDateStr === dateStr;
             });
 
             // Prepare slot info for modal
             setSelectedSlot({
                 scheduleId: item.id,
-                date: date,
+                date: pureUtcDate,
                 hourIndex: hourIndex,
-                dayName: format(date, 'EEEE'),
+                dayName: format(localDate, 'EEEE'),
                 hourTime: periods.find(p => p.index === hourIndex)?.startTime || hourIndex,
                 currentStatus: sub?.status, // ABSENT, COVERED
                 substituteName: sub?.substituteTeacher ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}` : undefined,
@@ -101,10 +103,9 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
         if (viewMode === 'TEMPLATE') return schedule;
 
         const processed = schedule.map(item => {
-            const itemDate = addDays(currentWeekStart, item.dayOfWeek);
+            const itemDateStr = format(addDays(currentWeekStart, item.dayOfWeek), 'yyyy-MM-dd');
             const sub = substitutions.find(s => {
                 const subDateStr = new Date(s.date).toISOString().split('T')[0];
-                const itemDateStr = itemDate.toISOString().split('T')[0];
                 return s.scheduleId === item.id && subDateStr === itemDateStr;
             });
 
@@ -208,11 +209,11 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
                     slotInfo={selectedSlot}
                     onSuccess={() => {
                         // Refresh subs
-                        const start = currentWeekStart;
-                        const end = addDays(start, 6);
+                        const startStr = format(currentWeekStart, 'yyyy-MM-dd');
+                        const endStr = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
                         Promise.all([
-                            getTeacherAbsences(teacherId, start, end),
-                            getTeacherCovers(teacherId, start, end)
+                            getTeacherAbsences(teacherId, new Date(startStr), new Date(endStr)),
+                            getTeacherCovers(teacherId, new Date(startStr), new Date(endStr))
                         ]).then(([absences, covers]) => {
                             setSubstitutions([...absences, ...covers]);
                         });

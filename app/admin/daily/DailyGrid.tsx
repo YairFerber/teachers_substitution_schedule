@@ -46,6 +46,11 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
 
     // --- State ---
     const [internalDate, setInternalDate] = useState(dateStr);
+
+    // Track manually removed teachers so they don't pop back immediately 
+    // when initialSubstitutions triggers a re-render from the server.
+    const [manuallyRemoved, setManuallyRemoved] = useState<string[]>([]);
+
     const [visibleTeacherIds, setVisibleTeacherIds] = useState<string[]>([]);
 
     // Add Teacher State
@@ -65,13 +70,10 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
     useEffect(() => {
         const involvedTeacherIds = new Set<string>();
         initialSubstitutions.forEach(sub => {
-            // Find schedule for specific sub
-            // Note: sub.schedule might be present now
             let teacherId = '';
             if (sub.schedule) {
                 teacherId = sub.schedule.teacherId;
             } else {
-                // Fallback using IDs
                 const sch = initialSchedules.find(s => s.id === sub.scheduleId);
                 if (sch) teacherId = sch.teacherId;
             }
@@ -81,9 +83,12 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
         setVisibleTeacherIds(prev => {
             const newSet = new Set(prev);
             involvedTeacherIds.forEach(id => newSet.add(id));
-            return Array.from(newSet);
+
+            // Filter out any teachers the user explicitly clicked 'X' on
+            const finalArray = Array.from(newSet).filter(id => !manuallyRemoved.includes(id));
+            return finalArray;
         });
-    }, [initialSubstitutions, initialSchedules]);
+    }, [initialSubstitutions, initialSchedules, manuallyRemoved]);
 
     // Close on click outside
     useEffect(() => {
@@ -132,6 +137,9 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
     const handleNextDay = () => handleDateChange(format(addDays(parseISO(internalDate), 1), 'yyyy-MM-dd'));
 
     const handleAddTeacher = (teacherId: string) => {
+        // If they were previously removed, forget that they were removed
+        setManuallyRemoved(prev => prev.filter(id => id !== teacherId));
+
         setVisibleTeacherIds(prev => {
             if (prev.includes(teacherId)) return prev;
             return [...prev, teacherId];
@@ -151,6 +159,7 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
 
         // Optimistic update
         setVisibleTeacherIds(visibleTeacherIds.filter(id => id !== teacherId));
+        setManuallyRemoved(prev => [...prev, teacherId]);
 
         // Server action
         await clearDailySubstitutions(teacherId, new Date(internalDate));
@@ -381,21 +390,30 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                             `}
                                                         >
                                                             {sub ? (
-                                                                <>
-                                                                    <div className={`w-full p-1 rounded text-white font-bold text-[10px] truncate
+                                                                <div className={`w-full p-1 rounded text-white font-bold text-[10px] flex justify-between items-center group/cancel
                                                                         ${sub.status === 'ABSENT' ? 'bg-red-500' : 'bg-green-500'}
                                                                     `}>
+                                                                    <span className="truncate">
                                                                         {sub.status === 'ABSENT' ? 'נעדר' :
                                                                             (() => {
                                                                                 const t = allTeachers.find(at => at.id === sub.substituteTeacherId);
                                                                                 return t ? t.lastName : 'מוחלף';
                                                                             })()
                                                                         }
-                                                                    </div>
-
-                                                                    {/* Cancel Button (contextual) */}
-                                                                    {/* We can put it in the dropdown actually. */}
-                                                                </>
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (confirm('האם לבטל השמה זו?')) {
+                                                                                onCancel(sub.id);
+                                                                            }
+                                                                        }}
+                                                                        className="opacity-0 group-hover/cancel:opacity-100 hover:text-red-200 transition-opacity ml-1"
+                                                                        title="בטל השמה/היעדרות"
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                </div>
                                                             ) : (
                                                                 <div className="w-full text-right">
                                                                     {/* Hidden button to mark absent */}

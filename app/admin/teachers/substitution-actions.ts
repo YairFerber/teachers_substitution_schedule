@@ -43,9 +43,7 @@ export async function markAbsence(scheduleId: string, date: Date) {
         });
     }
 
-    revalidatePath('/admin/teachers');
-    revalidatePath('/admin/teachers/[id]', 'page');
-    revalidatePath('/admin/daily');
+    revalidatePath('/', 'layout');
     return { success: true };
 }
 
@@ -59,8 +57,7 @@ export async function cancelAbsence(substitutionId: string) {
         where: { id: substitutionId }
     });
 
-    revalidatePath('/admin/teachers');
-    revalidatePath('/admin/daily');
+    revalidatePath('/', 'layout'); // Force global layout refresh to catch all nested routes including daily and teachers
     return { success: true };
 }
 
@@ -177,9 +174,7 @@ export async function assignSubstitute(substitutionId: string, substituteTeacher
         }
     });
 
-    revalidatePath('/admin/teachers');
-    revalidatePath('/admin/teachers/[id]', 'page');
-    revalidatePath('/admin/daily');
+    revalidatePath('/', 'layout');
     return { success: true };
 }
 
@@ -252,7 +247,6 @@ export async function clearDailySubstitutions(teacherId: string, date: Date) {
         }
     });
 
-    revalidatePath('/admin/daily');
-    revalidatePath('/admin/teachers');
+    revalidatePath('/', 'layout');
     return { success: true };
 }
