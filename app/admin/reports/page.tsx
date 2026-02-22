@@ -12,6 +12,7 @@ interface SubstitutionReportItem {
     isExtra?: boolean;
     absenceType?: string;
     substituteTeacherId?: string | null;
+    notes?: string | null;
     schedule: {
         hourIndex: number;
         subject: string | null;
@@ -89,17 +90,17 @@ export default function MonthlyReportPage() {
     };
 
     const extraData = generateMatrixData(
-        sub => Boolean(sub.isExtra && sub.substituteTeacherId),
+        sub => Boolean(sub.substituteTeacherId && (sub.isExtra || sub.status === 'COVERED')),
         sub => ({ id: sub.substituteTeacherId!, name: `${sub.substituteTeacher?.firstName} ${sub.substituteTeacher?.lastName}` })
     );
 
     const absentSystemData = generateMatrixData(
-        sub => sub.status === 'ABSENT' && sub.absenceType !== 'WORK_OUT',
+        sub => Boolean(sub.absenceType && sub.absenceType !== 'WORK_OUT'),
         sub => ({ id: sub.schedule.teacher.id, name: `${sub.schedule.teacher.firstName} ${sub.schedule.teacher.lastName}` })
     );
 
     const absentOutData = generateMatrixData(
-        sub => sub.status === 'ABSENT' && sub.absenceType === 'WORK_OUT',
+        sub => sub.absenceType === 'WORK_OUT',
         sub => ({ id: sub.schedule.teacher.id, name: `${sub.schedule.teacher.firstName} ${sub.schedule.teacher.lastName}` })
     );
 
@@ -272,6 +273,7 @@ export default function MonthlyReportPage() {
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                                 {sub.schedule.subject} ({sub.schedule.class?.name})
                                                                 {sub.isExtra && <span className="ml-2 bg-purple-100 text-purple-800 text-xs px-2 rounded-full">שעה נוספת</span>}
+                                                                {sub.notes && <span className="block text-xs text-gray-400 mt-1 italic">{sub.notes}</span>}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                                 {sub.schedule.teacher.firstName} {sub.schedule.teacher.lastName}
@@ -315,6 +317,8 @@ export default function MonthlyReportPage() {
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                                     {sub.schedule.subject} ({sub.schedule.class?.name})
+                                                                    {sub.isExtra && <span className="ml-2 bg-purple-100 text-purple-800 text-xs px-2 rounded-full">שעה נוספת</span>}
+                                                                    {sub.notes && <span className="block text-xs text-gray-400 mt-1 italic">{sub.notes}</span>}
                                                                 </td>
                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                                     {sub.schedule.teacher.firstName} {sub.schedule.teacher.lastName}

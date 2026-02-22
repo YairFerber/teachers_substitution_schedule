@@ -84,9 +84,9 @@ body {
   th,
   td {
     border: 1px solid #ddd !important;
-    padding: 6px !important;
+    padding: 4px !important;
     /* Slightly more padding for readability */
-    font-size: 10pt !important;
+    font-size: 9pt !important;
     color: black !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -117,6 +117,11 @@ body {
   /* Ensure page fits nicely */
   @page {
     size: landscape;
-    margin: 1cm;
+    margin: 0.5cm;
+  }
+
+  /* Force shrink massive tables */
+  #report-container table {
+    zoom: 85%;
   }
 }

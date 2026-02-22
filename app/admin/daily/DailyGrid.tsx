@@ -188,8 +188,8 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
         router.refresh();
     };
 
-    const onToggleExtraClass = async (teacherId: string, hourIndex: number, isExtra: boolean) => {
-        await toggleExtraClass(teacherId, new Date(internalDate), hourIndex, isExtra, 'Added from Daily Grid');
+    const onToggleExtraClass = async (teacherId: string, hourIndex: number, isExtra: boolean, notes: string = '') => {
+        await toggleExtraClass(teacherId, new Date(internalDate), hourIndex, isExtra, notes);
         router.refresh();
     };
 
@@ -407,7 +407,11 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                             {/* Extra Class Hover Btn */}
                                                             {!sub?.isExtra && (
                                                                 <button
-                                                                    onClick={(e) => { e.stopPropagation(); onToggleExtraClass(teacherId, periodIndex, true); }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const notes = prompt('שייך לכתה / הערות (אופציונלי):') || '';
+                                                                        onToggleExtraClass(teacherId, periodIndex, true, notes);
+                                                                    }}
                                                                     className="absolute -top-2 -left-2 bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover/menu:opacity-100 shadow-md transition-opacity z-40 text-[10px]"
                                                                     title="הוסף שעה נוספת"
                                                                 >
@@ -476,7 +480,11 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                     ) : (
                                                         <div className="w-full h-full p-1 rounded hover:bg-gray-100 transition-colors relative group/empty">
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); onToggleExtraClass(teacherId, periodIndex, true); }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const notes = prompt('שייך לכתה / הערות (אופציונלי):') || '';
+                                                                    onToggleExtraClass(teacherId, periodIndex, true, notes);
+                                                                }}
                                                                 className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover/empty:opacity-100 shadow-md transition-opacity text-xs"
                                                                 title="הוסף שעה נוספת"
                                                             >

@@ -267,6 +267,9 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                                 } else if (t.status === 'INDIVIDUAL') {
                                     bgClass = 'hover:bg-purple-50';
                                     badgeClass = 'bg-purple-100 text-purple-700';
+                                } else if (t.status === 'BUSY_CLASS' || t.status === 'BUSY_SUB') {
+                                    bgClass = 'hover:bg-rose-50 opacity-70';
+                                    badgeClass = 'bg-rose-100 text-rose-700';
                                 }
 
                                 const isOfficialSub = t.type === 'SUBSTITUTE';
@@ -275,14 +278,14 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                                     <button
                                         key={t.id}
                                         onClick={() => setSelectedTeacher(t.id)}
-                                        className={`w-full text-left p-3 flex justify-between items-center transition-colors ${bgClass} ${selectedTeacher === t.id ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50' : ''}`}
+                                        className={`w-full text-right p-3 flex justify-between items-center transition-colors group ${bgClass} ${selectedTeacher === t.id ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50' : ''}`}
                                     >
                                         <div className="flex items-center gap-2">
                                             <span className={`font-medium ${isOfficialSub ? 'text-indigo-700' : 'text-gray-700'}`}>
-                                                {t.firstName} {t.lastName}
+                                                {t.lastName} {t.firstName}
                                             </span>
                                             {isOfficialSub && (
-                                                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded border border-indigo-200">מ\"מ</span>
+                                                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded border border-indigo-200">מ"מ</span>
                                             )}
                                         </div>
                                         <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${badgeClass}`}>

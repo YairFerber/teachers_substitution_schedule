@@ -123,13 +123,20 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
     const teacherSchedules = new Map(hourSchedules.map(s => [s.teacherId, s.type]));
 
     // Filter out busy teachers and enrich with status
-    const availableTeachers = allTeachers
-        .filter((t: any) => !busyTeacherIds.has(t.id))
-        .map((t: any) => {
-            const schedType = teacherSchedules.get(t.id);
-            let status = 'FREE';
-            let label = 'פנוי';
+    const processed = allTeachers.map((t: any) => {
+        let status = 'FREE';
+        let label = 'פנוי';
 
+        const isBusySubbing = Array.from(busySubstitutes).some((s: any) => s.substituteTeacherId === t.id);
+
+        if (isBusySubbing) {
+            status = 'BUSY_SUB';
+            label = 'ממלא מקום';
+        } else if (busyTeacherIds.has(t.id)) {
+            status = 'BUSY_CLASS';
+            label = 'בשיעור';
+        } else {
+            const schedType = teacherSchedules.get(t.id);
             if (schedType === 'STAY') {
                 status = 'STAY';
                 label = 'שהייה';
@@ -137,31 +144,30 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
                 status = 'INDIVIDUAL';
                 label = 'פרטני';
             }
+        }
 
-            return {
-                ...t,
-                status,
-                label
-            };
-        });
-
-    // Sort: Official Substitutes first, then FREE, then STAY, then INDIVIDUAL
-    availableTeachers.sort((a, b) => {
-        // Priority for Official Substitutes
-        if (a.type === 'SUBSTITUTE' && b.type !== 'SUBSTITUTE') return -1;
-        if (a.type !== 'SUBSTITUTE' && b.type === 'SUBSTITUTE') return 1;
-
-        // Priority by status
-        const statusOrder: Record<string, number> = { 'FREE': 0, 'STAY': 1, 'INDIVIDUAL': 2 };
-        const orderA = statusOrder[a.status] ?? 99;
-        const orderB = statusOrder[b.status] ?? 99;
-
-        if (orderA !== orderB) return orderA - orderB;
-
-        return a.lastName.localeCompare(b.lastName);
+        return {
+            ...t,
+            status,
+            label
+        };
     });
 
-    return availableTeachers;
+    const candidates = processed.filter(p => ['FREE', 'STAY', 'INDIVIDUAL', 'BUSY_CLASS'].includes(p.status));
+
+    candidates.sort((a, b) => {
+        const score = (p: any) => {
+            if (p.status === 'STAY') return 1;
+            if (p.status === 'INDIVIDUAL') return 2;
+            if (p.status === 'FREE' && p.type === 'SUBSTITUTE') return 3;
+            if (p.status === 'FREE') return 4;
+            if (p.status === 'BUSY_CLASS') return 5;
+            return 9;
+        };
+        return score(a) - score(b);
+    });
+
+    return candidates;
 }
 
 export async function assignSubstitute(substitutionId: string, substituteTeacherId: string, isExtra: boolean = false) {
