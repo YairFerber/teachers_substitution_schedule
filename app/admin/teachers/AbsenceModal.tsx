@@ -51,7 +51,6 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
         try {
             await markAbsence(slotInfo.scheduleId, slotInfo.date, absenceType);
             onSuccess();
-            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
@@ -67,7 +66,6 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
         try {
             await toggleExtraClass(slotInfo.teacherId, slotInfo.date, slotInfo.hourIndex, true, extraNotes);
             onSuccess();
-            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
@@ -78,12 +76,11 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
     };
 
     const handleRemoveExtraClass = async () => {
-        if (!slotInfo.teacherId) return;
+        if (!slotInfo.substitutionId) return;
         setLoading(true);
         try {
-            await toggleExtraClass(slotInfo.teacherId, slotInfo.date, slotInfo.hourIndex, false, '');
+            await cancelAbsence(slotInfo.substitutionId);
             onSuccess();
-            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
@@ -108,12 +105,11 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
     };
 
     const handleAssign = async () => {
-        if (!selectedTeacher || !slotInfo.substitutionId) return; // Must have substitution record first (Absence)
+        if (!selectedTeacher || !slotInfo.substitutionId) return;
         setLoading(true);
         try {
             await assignSubstitute(slotInfo.substitutionId, selectedTeacher);
             onSuccess();
-            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);
@@ -131,7 +127,6 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
         try {
             await cancelAbsence(slotInfo.substitutionId);
             onSuccess();
-            router.refresh();
             onClose();
         } catch (e) {
             console.error(e);

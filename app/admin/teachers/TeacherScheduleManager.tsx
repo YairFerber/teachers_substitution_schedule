@@ -241,7 +241,7 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
                     onClose={() => setIsAbsenceModalOpen(false)}
                     slotInfo={selectedSlot}
                     onSuccess={() => {
-                        // Refresh subs
+                        // Refresh subs from server
                         const startStr = format(currentWeekStart, 'yyyy-MM-dd');
                         const endStr = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
                         Promise.all([
@@ -250,6 +250,8 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
                         ]).then(([absences, covers]) => {
                             setSubstitutions([...absences, ...covers]);
                         });
+                        // Also refresh server component data (e.g. schedule prop) to remove orphaned ad-hoc schedules
+                        router.refresh();
                     }}
                 />
             )}
