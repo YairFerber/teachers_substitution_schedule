@@ -77,17 +77,23 @@ The **Daily Organizer** (`/admin/daily`) is the "Command Center" for the school 
 
 ### Workflow:
 1. **DatePicker**: Select the day (e.g., "Sunday, 22/02").
-2. **Add Absences**: Use the sidebar to quickly add teachers who called in sick.
-3. **The Matrix**: Look for **Red** cells (Absences) and click them to assign coverage instantly from the real-time availability list.
+2. **Add Teacher**: Use the sidebar to find a teacher. Upon selection, you will be asked:
+    - **יומי (Daily)**: Mark the entire day absent immediately.
+    - **שעתי (Hourly)**: Add the teacher to the grid and mark specific hours manually.
+3. **Marking Specific Hours**: For "Hourly" mode, click on a class cell and select the absence type (Sick/Vacation/Duty).
+4. **The Matrix**: Click **Red** cells (Absences) to assign coverage instantly from the real-time availability list.
 
 ---
 
 ## 📊 Reports & Exports
 
 ### Monthly Substitution Report
-Navigate to **Admin > Reports** to view all coverage data for the month.
-- **Group by Teacher**: Ideal for calculating monthly payroll/hours for substitutes.
-- **Group by Date**: Perfect for record-keeping and historical auditing.
+Navigate to **Admin > Reports** to view all coverage data:
+- **Tab 1: דוח יומי (Daily Report)**: A chronological list of all events, sorted by date.
+- **Tab 2: שעות מילוי מקום**: Summary matrix of all monthly coverage.
+- **Matrix Symbols**: 
+    - **X**: Indicates a **Daily Absence**.
+    - **Number**: Indicates the count of **Hourly Absences** for that day.
 
 ### Exporting Data
 Every report includes professional export options:
@@ -106,6 +112,14 @@ To set up a new school year or semester:
 
 ### Database Backup
 Use the **Download Database** button to keep a local backup of all school data, including historical substitutions.
+
+---
+
+## 🛠️ Developer Notes (Admin)
+### Sync & Types
+After major updates (like V1.2), ensure you run:
+`npx prisma generate`
+to keep your local environment in sync with the database schema.
 
 ---
 

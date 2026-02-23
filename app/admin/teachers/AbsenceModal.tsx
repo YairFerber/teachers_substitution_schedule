@@ -147,44 +147,34 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                 {step === 'VIEW' && (
                     <div className="space-y-4">
                         {!slotInfo.currentStatus && (
-                            <div className="bg-gray-50 border p-4 rounded-lg space-y-6" dir="rtl">
-                                <div>
-                                    <h4 className="font-semibold mb-2 text-gray-700">סימון היעדרות במערכת</h4>
-                                    <select
-                                        value={absenceType}
-                                        onChange={(e) => setAbsenceType(e.target.value)}
-                                        className="w-full mb-3 border border-gray-300 rounded p-2 text-sm"
-                                    >
-                                        <option value="SICK">מחלה (Sick)</option>
-                                        <option value="VACATION">חופשה (Vacation)</option>
-                                        <option value="WORK_OUT">עבודה מחוץ לביה"ס (Work out of school)</option>
-                                    </select>
-                                    <button
-                                        onClick={handleMarkAbsence}
-                                        disabled={loading || !slotInfo.scheduleId}
-                                        className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
-                                    >
-                                        סמן כהיעדרות
-                                    </button>
+                            <div className="bg-gray-50 border p-4 rounded-lg" dir="rtl">
+                                <h4 className="font-semibold mb-3 text-gray-700">סימון היעדרות</h4>
+                                <div className="space-y-2 mb-3">
+                                    {[
+                                        { value: 'SICK', label: 'מחלה', emoji: '🤒', hoverClass: 'hover:border-red-400 hover:bg-red-50' },
+                                        { value: 'VACATION', label: 'חופש', emoji: '🌴', hoverClass: 'hover:border-orange-400 hover:bg-orange-50' },
+                                        { value: 'WORK_OUT', label: 'בתפקיד', emoji: '🛡️', hoverClass: 'hover:border-indigo-400 hover:bg-indigo-50' },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setAbsenceType(opt.value)}
+                                            className={`w-full p-3 text-right rounded-lg border-2 transition-all font-medium text-sm flex items-center gap-2 ${absenceType === opt.value
+                                                ? 'border-gray-700 bg-gray-100 text-gray-900 font-bold'
+                                                : `border-gray-200 bg-white text-gray-700 ${opt.hoverClass}`
+                                                }`}
+                                        >
+                                            <span>{opt.emoji}</span> {opt.label}
+                                            {absenceType === opt.value && <span className="mr-auto text-gray-500 text-xs">✓ נבחר</span>}
+                                        </button>
+                                    ))}
                                 </div>
-
-                                <div className="border-t pt-4">
-                                    <h4 className="font-semibold mb-2 text-gray-700">הוספת שעה נוספת (מילוי מקום חופשי)</h4>
-                                    <input
-                                        type="text"
-                                        placeholder="הערות למילוי המקום (אופציונלי)"
-                                        value={extraNotes}
-                                        onChange={(e) => setExtraNotes(e.target.value)}
-                                        className="w-full mb-3 border border-gray-300 rounded p-2 text-sm"
-                                    />
-                                    <button
-                                        onClick={handleAddExtraClass}
-                                        disabled={loading}
-                                        className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
-                                    >
-                                        שייך שעה נוספת
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={handleMarkAbsence}
+                                    disabled={loading || !slotInfo.scheduleId}
+                                    className="w-full py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
+                                >
+                                    סמן כהיעדרות
+                                </button>
                             </div>
                         )}
 
@@ -250,7 +240,18 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                     <div className="space-y-4">
                         <h4 className="font-semibold text-gray-700">Select Substitute:</h4>
                         <div className="max-h-60 overflow-y-auto border rounded divide-y">
-                            {availableTeachers.map(t => {
+                            {availableTeachers.slice().sort((a, b) => {
+                                const score = (p: any) => {
+                                    if (p.status === 'STAY') return 1;
+                                    if (p.status === 'INDIVIDUAL') return 2;
+                                    if (p.status === 'FREE' && p.type === 'SUBSTITUTE') return 3;
+                                    if (p.status === 'FREE') return 4;
+                                    if (p.status === 'BUSY_CLASS' || p.status === 'BUSY_SUB') return 5;
+                                    if (p.status === 'ABSENT') return 10;
+                                    return 9;
+                                };
+                                return score(a) - score(b);
+                            }).map(t => {
                                 let bgClass = 'hover:bg-gray-50';
                                 let badgeClass = 'bg-gray-100 text-gray-600';
 
@@ -263,6 +264,9 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                                 } else if (t.status === 'INDIVIDUAL') {
                                     bgClass = 'hover:bg-purple-50';
                                     badgeClass = 'bg-purple-100 text-purple-700';
+                                } else if (t.status === 'ABSENT') {
+                                    bgClass = 'hover:bg-red-50 opacity-50';
+                                    badgeClass = 'bg-red-500 text-white animate-pulse';
                                 } else if (t.status === 'BUSY_CLASS' || t.status === 'BUSY_SUB') {
                                     bgClass = 'hover:bg-rose-50 opacity-70';
                                     badgeClass = 'bg-rose-100 text-rose-700';

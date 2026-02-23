@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition } from 'react';
 import { format, addDays, subDays, parseISO, getDay } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import DailySubSelector from './DailySubSelector';
-import { markAbsence, assignSubstitute, cancelAbsence, clearDailySubstitutions, toggleExtraClass } from '@/app/admin/teachers/substitution-actions';
+import { markAbsence, markDailyAbsence, assignSubstitute, cancelAbsence, clearDailySubstitutions } from '@/app/admin/teachers/substitution-actions';
 
 interface Teacher {
     id: string;
@@ -65,7 +65,12 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
     // Selection State
     const [selectedCell, setSelectedCell] = useState<{ teacherId: string, hourIndex: number } | null>(null);
 
-    // --- Effects ---
+    // Absence Choice State
+    const [absenceChoiceTeacherId, setAbsenceChoiceTeacherId] = useState<string | null>(null);
+    const [selectedAbsenceType, setSelectedAbsenceType] = useState<string>('SICK');
+    const [hourlyMarkingCell, setHourlyMarkingCell] = useState<{ scheduleId: string } | null>(null);
+
+    // ...
 
     useEffect(() => {
         setInternalDate(dateStr);
@@ -140,16 +145,34 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
     const handlePrevDay = () => handleDateChange(format(subDays(parseISO(internalDate), 1), 'yyyy-MM-dd'));
     const handleNextDay = () => handleDateChange(format(addDays(parseISO(internalDate), 1), 'yyyy-MM-dd'));
 
-    const handleAddTeacher = (teacherId: string) => {
+    const handleAddTeacherStep1 = (teacherId: string) => {
+        setAbsenceChoiceTeacherId(teacherId);
+        setIsAddingTeacher(false);
+        setTeacherSearch('');
+    };
+
+    const handleAbsenceChoice = async (type: 'DAILY' | 'HOURLY') => {
+        if (!absenceChoiceTeacherId) return;
+
+        const teacherId = absenceChoiceTeacherId;
+        const absenceType = selectedAbsenceType;
+
+        setAbsenceChoiceTeacherId(null);
+
         // If they were previously removed, forget that they were removed
         setManuallyRemoved(prev => prev.filter(id => id !== teacherId));
 
-        setVisibleTeacherIds(prev => {
-            if (prev.includes(teacherId)) return prev;
-            return [...prev, teacherId];
-        });
-        setIsAddingTeacher(false);
-        setTeacherSearch('');
+        if (type === 'DAILY') {
+            await markDailyAbsence(teacherId, new Date(internalDate), absenceType);
+            // After marking daily, teacher will automatically show up via initialSubstitutions effect
+        } else {
+            // Hourly: just add to visible list
+            setVisibleTeacherIds(prev => {
+                if (prev.includes(teacherId)) return prev;
+                return [...prev, teacherId];
+            });
+        }
+        router.refresh();
     };
 
 
@@ -172,9 +195,14 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
 
     // Server Actions Wrappers
     const onMarkAbsent = async (scheduleId: string) => {
-        await markAbsence(scheduleId, new Date(internalDate)); // Pass pure date string? server expects Date object
-        // Refresh happens via router.refresh in server action usually, but we need to trigger it here?
-        // Server action calls revalidatePath. We just need to wait.
+        setHourlyMarkingCell({ scheduleId });
+    };
+
+    const handleHourlyAbsenceConfirm = async (absenceType: string) => {
+        if (!hourlyMarkingCell) return;
+
+        await markAbsence(hourlyMarkingCell.scheduleId, new Date(internalDate), absenceType, 'HOURLY');
+        setHourlyMarkingCell(null);
         router.refresh();
     };
 
@@ -189,10 +217,7 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
         router.refresh();
     };
 
-    const onToggleExtraClass = async (teacherId: string, hourIndex: number, isExtra: boolean, notes: string = '') => {
-        await toggleExtraClass(teacherId, new Date(internalDate), hourIndex, isExtra, notes);
-        router.refresh();
-    };
+
 
     // --- Render ---
     const filteredTeachers = allTeachers
@@ -231,7 +256,7 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                     filteredTeachers.map(t => (
                                         <button
                                             key={t.id}
-                                            onClick={() => handleAddTeacher(t.id)}
+                                            onClick={() => handleAddTeacherStep1(t.id)}
                                             className="w-full text-right px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-md transition-colors flex justify-between items-center"
                                         >
                                             <span>{t.lastName} {t.firstName}</span>
@@ -410,20 +435,7 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                 ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-200 z-30' : 'border-transparent hover:bg-gray-100'}
                                                             `}
                                                         >
-                                                            {/* Extra Class Hover Btn */}
-                                                            {!sub?.isExtra && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const notes = prompt('שייך לכתה / הערות (אופציונלי):') || '';
-                                                                        onToggleExtraClass(teacherId, periodIndex, true, notes);
-                                                                    }}
-                                                                    className="absolute -top-2 -left-2 bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover/menu:opacity-100 shadow-md transition-opacity z-40 text-[10px]"
-                                                                    title="הוסף שעה נוספת"
-                                                                >
-                                                                    +
-                                                                </button>
-                                                            )}
+                                                            {/* No more ad-hoc extra button per V1.2 requirements */}
 
                                                             {sub ? (
                                                                 <div className={`w-full p-1 rounded text-white font-bold text-[10px] flex justify-between items-center group/cancel
@@ -461,7 +473,6 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                 </div>
                                                             )}
 
-                                                            {/* Selector Dropdown */}
                                                             {isSelected && sub && !sub.isExtra && (
                                                                 <DailySubSelector
                                                                     hourIndex={periodIndex}
@@ -471,24 +482,15 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                         const h = s.schedule ? s.schedule.hourIndex : initialSchedules.find(sch => sch.id === s.scheduleId)?.hourIndex;
                                                                         return h === periodIndex;
                                                                     })}
+                                                                    allSubsToday={initialSubstitutions}
                                                                     onSelect={(subTeacherId) => onAssignSub(sub.id, subTeacherId)}
                                                                     onClose={() => setSelectedCell(null)}
                                                                 />
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <div className="w-full h-full p-1 rounded hover:bg-gray-100 transition-colors relative group/empty">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const notes = prompt('שייך לכתה / הערות (אופציונלי):') || '';
-                                                                    onToggleExtraClass(teacherId, periodIndex, true, notes);
-                                                                }}
-                                                                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover/empty:opacity-100 shadow-md transition-opacity text-xs"
-                                                                title="הוסף שעה נוספת"
-                                                            >
-                                                                +
-                                                            </button>
+                                                        <div className="w-full h-full p-1 rounded transition-colors">
+                                                            {/* Empty cell - no ad-hoc extra class per V1.2 */}
                                                         </div>
                                                     )}
                                                 </td>
@@ -511,6 +513,104 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                 </table>
             </div>
 
+            {/* Absence Choice Modal - rendered at root level */}
+            {absenceChoiceTeacherId && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md text-right border border-gray-100" dir="rtl" style={{ colorScheme: 'light', color: '#111827', backgroundColor: 'white' }}>
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">הגדרת היעדרות</h3>
+
+                        <div className="mb-6 space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">סיבת היעדרות:</label>
+                            {[
+                                { value: 'SICK', label: 'מחלה', emoji: '🤒', hoverClass: 'hover:border-red-400 hover:bg-red-50' },
+                                { value: 'VACATION', label: 'חופש', emoji: '🌴', hoverClass: 'hover:border-orange-400 hover:bg-orange-50' },
+                                { value: 'WORK_OUT', label: 'בתפקיד', emoji: '🛡️', hoverClass: 'hover:border-indigo-400 hover:bg-indigo-50' },
+                            ].map(opt => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => setSelectedAbsenceType(opt.value)}
+                                    className={`w-full p-3 text-right rounded-xl border-2 transition-all font-medium text-sm flex items-center gap-2 ${selectedAbsenceType === opt.value
+                                        ? 'border-gray-700 bg-gray-100 text-gray-900 font-bold'
+                                        : `border-gray-200 bg-white text-gray-700 ${opt.hoverClass}`
+                                        }`}
+                                >
+                                    <span>{opt.emoji}</span> {opt.label}
+                                    {selectedAbsenceType === opt.value && <span className="mr-auto text-gray-500 text-xs">✓ נבחר</span>}
+                                </button>
+                            ))}
+                        </div>
+
+                        <p className="text-gray-600 mb-6 font-medium">כיצד תרצה להגדיר את היעדרות המורה?</p>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                onClick={() => handleAbsenceChoice('DAILY')}
+                                className="flex flex-col items-center justify-center p-6 bg-red-50 text-red-700 rounded-xl border-2 border-red-100 hover:border-red-300 hover:bg-red-100 transition-all group"
+                            >
+                                <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">📅</span>
+                                <span className="font-bold text-lg">היעדרות יומית</span>
+                                <span className="text-xs mt-1 text-red-500 opacity-80">(כל המערכת תיחסם)</span>
+                            </button>
+
+                            <button
+                                onClick={() => handleAbsenceChoice('HOURLY')}
+                                className="flex flex-col items-center justify-center p-6 bg-blue-50 text-blue-700 rounded-xl border-2 border-blue-100 hover:border-blue-300 hover:bg-blue-100 transition-all group"
+                            >
+                                <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">🕐</span>
+                                <span className="font-bold text-lg">היעדרות שעתית</span>
+                                <span className="text-xs mt-1 text-blue-500 opacity-80">(בחירה ידנית בטבלה)</span>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setAbsenceChoiceTeacherId(null)}
+                            className="w-full mt-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                        >
+                            ביטול
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Hourly Absence Type Modal */}
+            {hourlyMarkingCell && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-right border border-gray-100" dir="rtl" style={{ colorScheme: 'light', color: '#111827', backgroundColor: 'white' }}>
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">סוג היעדרות</h3>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => handleHourlyAbsenceConfirm('SICK')}
+                                className="w-full p-4 text-right bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 rounded-xl transition-all flex items-center justify-between group"
+                            >
+                                <span className="font-bold">🤒 מחלה</span>
+                                <span className="text-gray-400 group-hover:translate-x-1 transition-transform">←</span>
+                            </button>
+                            <button
+                                onClick={() => handleHourlyAbsenceConfirm('VACATION')}
+                                className="w-full p-4 text-right bg-white border-2 border-gray-100 hover:border-orange-500 hover:bg-orange-50 rounded-xl transition-all flex items-center justify-between group"
+                            >
+                                <span className="font-bold">🌴 חופש</span>
+                                <span className="text-gray-400 group-hover:translate-x-1 transition-transform">←</span>
+                            </button>
+                            <button
+                                onClick={() => handleHourlyAbsenceConfirm('WORK_OUT')}
+                                className="w-full p-4 text-right bg-white border-2 border-gray-100 hover:border-indigo-500 hover:bg-indigo-50 rounded-xl transition-all flex items-center justify-between group"
+                            >
+                                <span className="font-bold">🛡️ בתפקיד</span>
+                                <span className="text-gray-400 group-hover:translate-x-1 transition-transform">←</span>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setHourlyMarkingCell(null)}
+                            className="w-full mt-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                        >
+                            ביטול
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

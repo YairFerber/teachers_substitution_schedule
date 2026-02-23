@@ -7,22 +7,28 @@ import * as XLSX from 'xlsx';
 interface MatrixData {
     teacherId: string;
     teacherName: string;
-    dailyTotals: Record<number, number>; // map of day (1-31) to count
-    total: number;
+    dailyTotals: Record<number, number | string>; // map of day (1-31) to count or "X"
+    total?: number; // legacy
+    totalDaily?: number;
+    totalHourly?: number;
 }
 
 interface SummaryMatrixProps {
     title: string;
     monthDate: Date;
     data: MatrixData[];
+    useMarks?: boolean; // If true, 0.5 or special value means DAILY absence
+    daysCount?: number; // Defaults to full month, can be 1 for daily view
+    skipExcel?: boolean;
 }
 
-export default function SummaryMatrix({ title, monthDate, data }: SummaryMatrixProps) {
-    const daysCount = getDaysInMonth(monthDate);
-    const daysArray = Array.from({ length: daysCount }, (_, i) => i + 1);
+export default function SummaryMatrix({ title, monthDate, data, useMarks = false, daysCount, skipExcel = false }: SummaryMatrixProps) {
+    const actualDaysCount = daysCount || getDaysInMonth(monthDate);
+    const daysArray = Array.from({ length: actualDaysCount }, (_, i) => daysCount === 1 ? monthDate.getDate() : i + 1);
 
     const handleDownloadExcel = () => {
-        const headers = ['שם המורה', ...daysArray.map(String), 'סה"כ'];
+        if (skipExcel) return;
+        const headers = ['שם המורה', ...daysArray.map(String), 'סה"כ ימים (X)', 'סה"כ שעות'];
         const rows = [headers];
 
         data.forEach(item => {
@@ -30,7 +36,8 @@ export default function SummaryMatrix({ title, monthDate, data }: SummaryMatrixP
             daysArray.forEach(day => {
                 row.push(item.dailyTotals[day]?.toString() || '');
             });
-            row.push(item.total.toString());
+            row.push(item.totalDaily?.toString() || '0');
+            row.push(item.totalHourly?.toString() || '0');
             rows.push(row);
         });
 
@@ -85,8 +92,14 @@ export default function SummaryMatrix({ title, monthDate, data }: SummaryMatrixP
                                     {day}
                                 </th>
                             ))}
-                            <th className="px-4 py-3 text-center text-xs font-bold text-indigo-700 border border-gray-200 bg-indigo-50 w-24">
-                                סה"כ
+                            {/* Only show Days column if data has totalDaily (absence reports) */}
+                            {data.some(r => r.totalDaily !== undefined) && (
+                                <th className="px-2 py-3 text-center text-[10px] font-bold text-red-700 border border-gray-200 bg-red-50 w-16">
+                                    סה"כ ימים (X)
+                                </th>
+                            )}
+                            <th className="px-2 py-3 text-center text-[10px] font-bold text-indigo-700 border border-gray-200 bg-indigo-50 w-16">
+                                סה"כ שעות
                             </th>
                         </tr>
                     </thead>
@@ -98,11 +111,20 @@ export default function SummaryMatrix({ title, monthDate, data }: SummaryMatrixP
                                 </td>
                                 {daysArray.map(day => (
                                     <td key={day} className="px-1 py-2 text-center text-sm text-gray-600 border border-gray-200">
-                                        {row.dailyTotals[day] > 0 ? row.dailyTotals[day] : ''}
+                                        {row.dailyTotals[day] === 'X' ? (
+                                            <span className="font-bold text-red-600">X</span>
+                                        ) : (
+                                            row.dailyTotals[day] !== 0 && row.dailyTotals[day] !== undefined ? row.dailyTotals[day] : ''
+                                        )}
                                     </td>
                                 ))}
-                                <td className="px-4 py-2 text-center text-sm font-bold text-indigo-700 border border-gray-200 bg-indigo-50/30">
-                                    {row.total}
+                                {data.some(r => r.totalDaily !== undefined) && (
+                                    <td className="px-2 py-2 text-center text-sm font-bold text-red-700 border border-gray-200 bg-red-50/20">
+                                        {row.totalDaily ?? 0}
+                                    </td>
+                                )}
+                                <td className="px-2 py-2 text-center text-sm font-bold text-indigo-700 border border-gray-200 bg-indigo-50/20">
+                                    {row.totalHourly ?? 0}
                                 </td>
                             </tr>
                         ))}

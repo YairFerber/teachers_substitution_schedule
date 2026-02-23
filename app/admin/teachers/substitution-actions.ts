@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 
-export async function markAbsence(scheduleId: string, date: Date, absenceType: string = 'SICK') {
+export async function markAbsence(scheduleId: string, date: Date, absenceType: string = 'SICK', absenceScope: string = 'HOURLY') {
     const session = await auth();
     if (!session?.user || (session.user as any).role !== 'ADMIN') {
         throw new Error('Unauthorized');
@@ -14,6 +14,28 @@ export async function markAbsence(scheduleId: string, date: Date, absenceType: s
     const d = new Date(date);
     const startOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
     const endOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+
+    // 1. Clear assignments where this teacher was the SUBSTITUTE for others at this hour today
+    const currentSchedule = await prisma.schedule.findUnique({
+        where: { id: scheduleId },
+        select: { hourIndex: true, teacherId: true }
+    });
+
+    if (currentSchedule) {
+        await prisma.substitution.updateMany({
+            where: {
+                substituteTeacherId: currentSchedule.teacherId,
+                date: startOfDay,
+                schedule: {
+                    hourIndex: currentSchedule.hourIndex
+                }
+            },
+            data: {
+                substituteTeacherId: null,
+                status: 'ABSENT'
+            }
+        });
+    }
 
     const existing = await prisma.substitution.findFirst({
         where: {
@@ -32,6 +54,7 @@ export async function markAbsence(scheduleId: string, date: Date, absenceType: s
                 status: 'ABSENT',
                 substituteTeacherId: null,
                 absenceType,
+                absenceScope,
                 isExtra: false
             }
         });
@@ -42,10 +65,69 @@ export async function markAbsence(scheduleId: string, date: Date, absenceType: s
                 date: startOfDay, // Save as standardized start of day
                 status: 'ABSENT',
                 absenceType,
+                absenceScope,
                 isExtra: false
             }
         });
     }
+
+    revalidatePath('/', 'layout');
+    return { success: true };
+}
+
+export async function markDailyAbsence(teacherId: string, date: Date, absenceType: string = 'SICK') {
+    const session = await auth();
+    if (!session?.user || (session.user as any).role !== 'ADMIN') {
+        throw new Error('Unauthorized');
+    }
+
+    const dayOfWeek = date.getDay();
+    const d = new Date(date);
+    const startOfDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+
+    // 1. Clear assignments where this teacher was the SUBSTITUTE for others today
+    await prisma.substitution.updateMany({
+        where: {
+            substituteTeacherId: teacherId,
+            date: startOfDay
+        },
+        data: {
+            substituteTeacherId: null,
+            status: 'ABSENT' // Back to absent so another sub can be picked
+        }
+    });
+
+    // 2. Get all scheduled classes for this teacher on this day
+    const schedules = await prisma.schedule.findMany({
+        where: {
+            teacherId,
+            dayOfWeek,
+            type: { in: ['REGULAR', 'STAY', 'INDIVIDUAL', 'MEETING', 'TEAM_MEETING'] }
+        }
+    });
+
+    // 3. Clear existing subs for these schedules on this day first (to avoid duplicates or conflicts)
+    await prisma.substitution.deleteMany({
+        where: {
+            scheduleId: { in: schedules.map(s => s.id) },
+            date: startOfDay
+        }
+    });
+
+    // 4. Create ABSENT substitution for each schedule the teacher has
+    // We only mark actual teaching/meeting hours as absent for substitution tracking
+    const schedulesToMark = schedules.filter(s => s.type !== 'FREE');
+
+    await prisma.substitution.createMany({
+        data: schedulesToMark.map(s => ({
+            scheduleId: s.id,
+            date: startOfDay,
+            status: 'ABSENT',
+            absenceType,
+            absenceScope: 'DAILY',
+            isExtra: false
+        }))
+    });
 
     revalidatePath('/', 'layout');
     return { success: true };
@@ -147,14 +229,35 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
 
     const teacherSchedules = new Map(hourSchedules.map(s => [s.teacherId, s.type]));
 
+    // 4. Identify teachers who are ABSENT for this specific hour or for the WHOLE DAY
+    const absentSubstitutions = await prisma.substitution.findMany({
+        where: {
+            date: {
+                gte: startOfDay,
+                lte: endOfDay
+            },
+            OR: [
+                { absenceScope: 'DAILY' }, // Absent for the whole day
+                { schedule: { hourIndex: hourIndex } } // Absent for this specific hour
+            ]
+        },
+        include: { schedule: true }
+    });
+
+    const absentTeacherIds = new Set(absentSubstitutions.map((s: any) => s.schedule?.teacherId).filter(Boolean));
+
     // Filter out busy teachers and enrich with status
     const processed = allTeachers.map((t: any) => {
         let status = 'FREE';
         let label = 'פנוי';
 
+        const isAbsent = absentTeacherIds.has(t.id);
         const isBusySubbing = Array.from(busySubstitutes).some((s: any) => s.substituteTeacherId === t.id);
 
-        if (isBusySubbing) {
+        if (isAbsent) {
+            status = 'ABSENT';
+            label = 'נעדר';
+        } else if (isBusySubbing) {
             status = 'BUSY_SUB';
             label = 'ממלא מקום';
         } else if (busyTeacherIds.has(t.id)) {

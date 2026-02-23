@@ -10,14 +10,22 @@ interface Teacher {
 }
 
 interface Schedule {
+    id: string;
     teacherId: string;
     hourIndex: number;
     type: string; // REGULAR, STAY, INDIVIDUAL, MEETING
 }
 
 interface Substitution {
+    id: string;
     substituteTeacherId: string | null;
-    schedule?: { hourIndex: number };
+    status: string;
+    absenceScope?: string | null;
+    scheduleId: string;
+    schedule?: {
+        hourIndex: number;
+        teacherId: string;
+    } | null;
 }
 
 interface DailySubSelectorProps {
@@ -25,11 +33,12 @@ interface DailySubSelectorProps {
     allTeachers: Teacher[];
     schedulesAtHour: Schedule[]; // Schedules for this specific hour
     subsAtHour: Substitution[];   // Substitutions occurring at this hour
+    allSubsToday?: Substitution[]; // Substitutions for the entire day (for DAILY checking)
     onSelect: (teacherId: string) => void;
     onClose: () => void;
 }
 
-export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHour, subsAtHour, onSelect, onClose }: DailySubSelectorProps) {
+export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHour, subsAtHour, allSubsToday = [], onSelect, onClose }: DailySubSelectorProps) {
     const [search, setSearch] = useState('');
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -41,11 +50,24 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
 
     // Categorize
     const processed = filteredTeachers.map(t => {
-        // 1. Check if covering someone else
+        // 1. Check if they are ABSENT for the WHOLE DAY or at this specific hour
+        const isAbsentDaily = allSubsToday.some(s =>
+            s.absenceScope === 'DAILY' &&
+            (s.schedule?.teacherId === t.id || (!s.schedule && schedulesAtHour.find(sch => sch.id === s.scheduleId)?.teacherId === t.id))
+        );
+
+        const isAbsentHourly = subsAtHour.some(s =>
+            s.status === 'ABSENT' &&
+            (s.schedule?.teacherId === t.id || (!s.schedule && schedulesAtHour.find(sch => sch.id === s.scheduleId)?.teacherId === t.id))
+        );
+
+        if (isAbsentDaily || isAbsentHourly) return { teacher: t, status: 'ABSENT', label: 'נעדר' };
+
+        // 2. Check if already covering someone else
         const isSubbing = subsAtHour.some(s => s.substituteTeacherId === t.id);
         if (isSubbing) return { teacher: t, status: 'BUSY_SUB', label: 'ממלא מקום' };
 
-        // 2. Check their own schedule
+        // 3. Check their own schedule
         const sched = schedulesAtHour.find(s => s.teacherId === t.id);
 
         if (!sched) {
@@ -55,17 +77,14 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
         switch (sched.type) {
             case 'STAY': return { teacher: t, status: 'STAY', label: 'שהייה' };
             case 'INDIVIDUAL': return { teacher: t, status: 'INDIVIDUAL', label: 'פרטני' };
-            case 'MEETING': return { teacher: t, status: 'MEETING', label: 'ישיבה' }; // treat as busy?
-            default: return { teacher: t, status: 'BUSY_CLASS', label: 'בשיעור' }; // REGULAR
+            case 'MEETING': return { teacher: t, status: 'MEETING', label: 'ישיבה' };
+            default: return { teacher: t, status: 'BUSY_CLASS', label: 'בשיעור' };
         }
     });
 
-    // Valid Candidates: Free, Stay, Individual
-    // Hidden: Busy Sub, Busy Class, Meeting (maybe?)
-    // User asked to see: Free, In School (Stay), Private (Individual)
-
+    // Valid Candidates: Free, Stay, Individual, Busy Class, Absent (moved to bottom)
     const candidates = processed.filter(p =>
-        ['FREE', 'STAY', 'INDIVIDUAL', 'BUSY_CLASS'].includes(p.status)
+        ['FREE', 'STAY', 'INDIVIDUAL', 'BUSY_CLASS', 'ABSENT'].includes(p.status)
     );
 
     // Sort:
@@ -82,6 +101,7 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
             if (p.status === 'FREE' && p.teacher.type === 'SUBSTITUTE') return 3;
             if (p.status === 'FREE') return 4;
             if (p.status === 'BUSY_CLASS') return 5;
+            if (p.status === 'ABSENT') return 10; // Lowest priority
             return 9;
         };
         return score(a) - score(b);
@@ -132,6 +152,9 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
                         } else if (status === 'BUSY_CLASS') {
                             bgClass = 'hover:bg-rose-50 opacity-70';
                             badgeClass = 'bg-rose-100 text-rose-700'; // Red
+                        } else if (status === 'ABSENT') {
+                            bgClass = 'hover:bg-red-50 opacity-50';
+                            badgeClass = 'bg-red-500 text-white animate-pulse'; // Bright red pulse
                         }
 
                         // Special highlight for Official Substitutes

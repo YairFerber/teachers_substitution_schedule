@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfMonth, subMonths, addMonths } from 'date-fns';
+import { format, subMonths, addMonths, subDays, addDays } from 'date-fns';
 import { getMonthlySubstitutions } from './actions';
 import SummaryMatrix from './SummaryMatrix';
 
@@ -22,16 +22,26 @@ interface SubstitutionReportItem {
     substituteTeacher?: { id: string; firstName: string; lastName: string } | null;
 }
 
+type TabType = 'ABSENT_DAILY' | 'ABSENT_MONTHLY' | 'SUB_DAILY' | 'SUB_MONTHLY';
+
+const absenceTypeLabel = (type?: string | null) => {
+    if (type === 'SICK') return '🤒 מחלה';
+    if (type === 'VACATION') return '🌴 חופש';
+    if (type === 'WORK_OUT') return '🛡️ בתפקיד';
+    return type || '';
+};
+
 export default function MonthlyReportPage() {
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState(new Date());
     const [substitutions, setSubstitutions] = useState<SubstitutionReportItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [sortBy, setSortBy] = useState<'teacher' | 'date'>('teacher');
-    const [activeTab, setActiveTab] = useState<'DETAILED' | 'EXTRA' | 'ABSENT_SYSTEM' | 'ABSENT_OUT'>('DETAILED');
+    const [activeTab, setActiveTab] = useState<TabType>('ABSENT_DAILY');
+
+    const isDailyTab = activeTab === 'ABSENT_DAILY' || activeTab === 'SUB_DAILY';
 
     useEffect(() => {
         setLoading(true);
-        getMonthlySubstitutions(currentMonth)
+        getMonthlySubstitutions(currentDate)
             .then(data => {
                 setSubstitutions(data);
                 setLoading(false);
@@ -40,310 +50,350 @@ export default function MonthlyReportPage() {
                 console.error(err);
                 setLoading(false);
             });
-    }, [currentMonth]);
+    }, [currentDate]);
 
-    // Filter for Detailed view (only actual coverings and extra classes)
-    const detailedSubs = substitutions.filter(s => s.status === 'COVERED' || s.isExtra);
+    // ─── Daily Absence Data ───────────────────────────────────────────
+    // Filter to selected date only
+    const selectedDateStr = format(currentDate, 'yyyy-MM-dd');
 
-    // Group by substitute teacher
-    const groupedSubs = detailedSubs.reduce((acc, sub) => {
-        const teacherName = sub.substituteTeacher
-            ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}`
-            : 'Unassigned';
+    // Aggregate: one row per teacher for the selected day
+    const buildDailyAbsenceSummary = (filterType: 'sick' | 'duty') => {
+        const byTeacher: Record<string, {
+            teacherId: string;
+            teacherName: string;
+            isDaily: boolean;
+            hourCount: number;
+            absenceType: string;
+        }> = {};
 
-        if (!acc[teacherName]) acc[teacherName] = [];
-        acc[teacherName].push(sub);
-        return acc;
-    }, {} as Record<string, SubstitutionReportItem[]>);
+        substitutions
+            .filter(s => {
+                const d = format(new Date(s.date), 'yyyy-MM-dd');
+                if (d !== selectedDateStr) return false;
+                if (!s.absenceType) return false;
+                return filterType === 'sick' ? s.absenceType !== 'WORK_OUT' : s.absenceType === 'WORK_OUT';
+            })
+            .forEach(s => {
+                const tid = s.schedule.teacher.id;
+                if (!byTeacher[tid]) {
+                    byTeacher[tid] = {
+                        teacherId: tid,
+                        teacherName: `${s.schedule.teacher.firstName} ${s.schedule.teacher.lastName}`,
+                        isDaily: false,
+                        hourCount: 0,
+                        absenceType: s.absenceType || '',
+                    };
+                }
+                if ((s as any).absenceScope === 'DAILY') {
+                    byTeacher[tid].isDaily = true;
+                } else {
+                    byTeacher[tid].hourCount++;
+                }
+            });
 
-    // Sort by Date
-    const sortedByDate = [...detailedSubs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return Object.values(byTeacher).sort((a, b) => a.teacherName.localeCompare(b.teacherName));
+    };
 
-    // Group by Date for visual grouping
-    const groupedByDate = detailedSubs.reduce((acc, sub) => {
-        const dateKey = format(new Date(sub.date), 'yyyy-MM-dd');
-        if (!acc[dateKey]) acc[dateKey] = [];
-        acc[dateKey].push(sub);
-        return acc;
-    }, {} as Record<string, SubstitutionReportItem[]>);
+    const dailySickSummary = buildDailyAbsenceSummary('sick');
+    const dailyDutySummary = buildDailyAbsenceSummary('duty');
 
-    const sortedDateKeys = Object.keys(groupedByDate).sort();
+    // ─── Daily Substitution Data ──────────────────────────────────────
+    // One row per substitute teacher, showing total hours they substituted today
+    const buildDailySubSummary = () => {
+        const byTeacher: Record<string, { teacherId: string; teacherName: string; hours: number }> = {};
 
-    // Matrix Processing
-    const generateMatrixData = (filterFn: (sub: SubstitutionReportItem) => boolean, keyExtractor: (sub: SubstitutionReportItem) => { id: string, name: string }) => {
-        const teacherTotals: Record<string, { teacherId: string; teacherName: string; dailyTotals: Record<number, number>; total: number }> = {};
+        substitutions
+            .filter(s => {
+                const d = format(new Date(s.date), 'yyyy-MM-dd');
+                return d === selectedDateStr && s.substituteTeacherId && s.status === 'COVERED';
+            })
+            .forEach(s => {
+                const tid = s.substituteTeacherId!;
+                const name = s.substituteTeacher
+                    ? `${s.substituteTeacher.firstName} ${s.substituteTeacher.lastName}`
+                    : 'לא ידוע';
+                if (!byTeacher[tid]) byTeacher[tid] = { teacherId: tid, teacherName: name, hours: 0 };
+                byTeacher[tid].hours++;
+            });
+
+        return Object.values(byTeacher).sort((a, b) => a.teacherName.localeCompare(b.teacherName));
+    };
+
+    const dailySubSummary = buildDailySubSummary();
+
+    // ─── Monthly Matrix Processing ────────────────────────────────────
+    const generateMatrixData = (
+        filterFn: (sub: SubstitutionReportItem) => boolean,
+        keyExtractor: (sub: SubstitutionReportItem) => { id: string, name: string },
+        showXForDaily: boolean = true
+    ) => {
+        const teacherTotals: Record<string, {
+            teacherId: string;
+            teacherName: string;
+            dailyTotals: Record<number, number | string>;
+            totalDaily: number;
+            totalHourly: number;
+        }> = {};
 
         substitutions.filter(filterFn).forEach(sub => {
             const teacher = keyExtractor(sub);
             if (!teacher || !teacher.id) return;
 
             if (!teacherTotals[teacher.id]) {
-                teacherTotals[teacher.id] = { teacherId: teacher.id, teacherName: teacher.name, dailyTotals: {}, total: 0 };
+                teacherTotals[teacher.id] = {
+                    teacherId: teacher.id,
+                    teacherName: teacher.name,
+                    dailyTotals: {},
+                    totalDaily: 0,
+                    totalHourly: 0
+                };
             }
 
             const day = new Date(sub.date).getDate();
-            teacherTotals[teacher.id].dailyTotals[day] = (teacherTotals[teacher.id].dailyTotals[day] || 0) + 1;
-            teacherTotals[teacher.id].total++;
+
+            if (showXForDaily && (sub as any).absenceScope === 'DAILY') {
+                if (teacherTotals[teacher.id].dailyTotals[day] !== 'X') {
+                    if (typeof teacherTotals[teacher.id].dailyTotals[day] === 'number') {
+                        teacherTotals[teacher.id].totalHourly -= (teacherTotals[teacher.id].dailyTotals[day] as number);
+                    }
+                    teacherTotals[teacher.id].dailyTotals[day] = 'X';
+                    teacherTotals[teacher.id].totalDaily++;
+                }
+            } else {
+                if (teacherTotals[teacher.id].dailyTotals[day] !== 'X') {
+                    teacherTotals[teacher.id].dailyTotals[day] = ((teacherTotals[teacher.id].dailyTotals[day] as number) || 0) + 1;
+                    teacherTotals[teacher.id].totalHourly++;
+                }
+            }
         });
 
         return Object.values(teacherTotals).sort((a, b) => a.teacherName.localeCompare(b.teacherName));
     };
 
-    const extraData = generateMatrixData(
-        sub => Boolean(sub.substituteTeacherId && (sub.isExtra || sub.status === 'COVERED')),
-        sub => ({ id: sub.substituteTeacherId!, name: `${sub.substituteTeacher?.firstName} ${sub.substituteTeacher?.lastName}` })
-    );
-
+    // Monthly Absence matrices
     const absentSystemData = generateMatrixData(
         sub => Boolean(sub.absenceType && sub.absenceType !== 'WORK_OUT'),
-        sub => ({ id: sub.schedule.teacher.id, name: `${sub.schedule.teacher.firstName} ${sub.schedule.teacher.lastName}` })
+        sub => ({ id: sub.schedule.teacher.id, name: `${sub.schedule.teacher.firstName} ${sub.schedule.teacher.lastName}` }),
+        true
     );
 
     const absentOutData = generateMatrixData(
         sub => sub.absenceType === 'WORK_OUT',
-        sub => ({ id: sub.schedule.teacher.id, name: `${sub.schedule.teacher.firstName} ${sub.schedule.teacher.lastName}` })
+        sub => ({ id: sub.schedule.teacher.id, name: `${sub.schedule.teacher.firstName} ${sub.schedule.teacher.lastName}` }),
+        true
     );
 
-    const handlePrint = () => {
-        window.print();
-    };
+    // Monthly Sub matrix — substitutions are ALWAYS hourly (no DAILY scope), summary = total hours
+    const subData = generateMatrixData(
+        sub => Boolean(sub.substituteTeacherId && sub.status === 'COVERED'),
+        sub => ({ id: sub.substituteTeacherId!, name: `${sub.substituteTeacher?.firstName} ${sub.substituteTeacher?.lastName}` }),
+        false // Never X for substitutions
+    );
+    // Hide totalDaily (0 always), keep totalHourly as total hours
+    const monthlySubData = subData.map(d => ({ ...d, totalDaily: undefined }));
 
-    const handleDownloadCSV = () => {
-        const headers = ['Substitute Teacher', 'Date', 'Day', 'Hour', 'Class', 'Subject', 'Original Teacher'];
-        const csvRows = [headers.join(',')];
+    const handlePrint = () => window.print();
 
-        let dataToExport: SubstitutionReportItem[] = [];
+    // ─── Simple Daily Table Component ──────────────────────────────────
+    const AbsenceDailyTable = ({
+        rows, title, color
+    }: {
+        rows: { teacherId: string; teacherName: string; isDaily: boolean; hourCount: number; absenceType: string }[];
+        title: string;
+        color: string;
+    }) => (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200" dir="rtl">
+            <div className={`px-6 py-4 border-b border-gray-100 flex justify-between items-center ${color}`}>
+                <h2 className="text-base font-bold">{title}</h2>
+                <span className="text-xs font-semibold bg-white/70 px-3 py-1 rounded-full">{rows.length} מורות</span>
+            </div>
+            {rows.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm">אין היעדרויות ביום זה</div>
+            ) : (
+                <table className="min-w-full divide-y divide-gray-100">
+                    <thead className="bg-gray-50/80">
+                        <tr>
+                            <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase w-1/2">שם המורה</th>
+                            <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase w-1/4">היקף</th>
+                            <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">סוג</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-50">
+                        {rows.map(row => (
+                            <tr key={row.teacherId} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-800">{row.teacherName}</td>
+                                <td className="px-6 py-3 text-center">
+                                    {row.isDaily ? (
+                                        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">
+                                            <span className="text-base leading-none">X</span> יומי
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">
+                                            {row.hourCount} {row.hourCount === 1 ? 'שעה' : 'שעות'}
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-3 text-sm text-gray-600">{absenceTypeLabel(row.absenceType)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
+    );
 
-        if (sortBy === 'date') {
-            dataToExport = sortedByDate;
-        } else {
-            // Flatten grouped
-            Object.values(groupedSubs).forEach(group => dataToExport.push(...group));
-        }
-
-        dataToExport.forEach((sub) => {
-            const teacherName = sub.substituteTeacher
-                ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}`
-                : 'Unassigned';
-            const date = new Date(sub.date).toLocaleDateString('he-IL');
-            const day = format(new Date(sub.date), 'EEEE');
-            const hour = sub.schedule.hourIndex;
-            const className = sub.schedule.class?.name || '-';
-            const subject = sub.schedule.subject || '-';
-            const originalTeacher = `${sub.schedule.teacher.firstName} ${sub.schedule.teacher.lastName}`;
-
-            csvRows.push([
-                `"${teacherName}"`,
-                `"${date}"`,
-                `"${day}"`,
-                `"${hour}"`,
-                `"${className}"`,
-                `"${subject}"`,
-                `"${originalTeacher}"`
-            ].join(','));
-        });
-
-        const csvString = '\uFEFF' + csvRows.join('\n'); // Add BOM for Excel Hebrew support
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `substitutions_report_${format(currentMonth, 'yyyy-MM')}_by_${sortBy}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+    // ─── Simple Daily Sub Table ─────────────────────────────────────────
+    const SubDailyTable = ({
+        rows
+    }: {
+        rows: { teacherId: string; teacherName: string; hours: number }[];
+    }) => (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200" dir="rtl">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-green-50 text-green-800">
+                <h2 className="text-base font-bold">מילוי מקום — {format(currentDate, 'dd/MM/yyyy')}</h2>
+                <span className="text-xs font-semibold bg-white/70 px-3 py-1 rounded-full">{rows.length} ממלאי מקום</span>
+            </div>
+            {rows.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm">אין מילוי מקום ביום זה</div>
+            ) : (
+                <table className="min-w-full divide-y divide-gray-100">
+                    <thead className="bg-gray-50/80">
+                        <tr>
+                            <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase w-2/3">שם המורה</th>
+                            <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">שעות מ"מ</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-50">
+                        {rows.map(row => (
+                            <tr key={row.teacherId} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-800">{row.teacherName}</td>
+                                <td className="px-6 py-3 text-center">
+                                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                                        {row.hours} {row.hours === 1 ? 'שעה' : 'שעות'}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
+    );
 
     return (
         <div id="report-container" className="min-h-screen bg-gray-50 p-8 print:bg-white print:p-0">
-            <div className="max-w-6xl mx-auto">
-                {/* Header (Hidden on Print) */}
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
                 <div className="flex justify-between items-center mb-8 print:hidden">
-                    <h1 className="text-3xl font-bold text-gray-800">Monthly Substitution Reports</h1>
-                    <div className="flex gap-4">
-                        <button onClick={handlePrint} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-2">
-                            <span>🖨️</span> Print to PDF
+                    <h1 className="text-3xl font-bold text-gray-800">דוחות נוכחות ומילוי מקום</h1>
+                    <div className="flex gap-3">
+                        <button onClick={handlePrint} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-sm">
+                            🖨️ הדפסה / PDF
                         </button>
-                        <button onClick={handleDownloadCSV} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium flex items-center gap-2">
-                            <span>📉</span> Download CSV
-                        </button>
-                        <a href="/admin/teachers" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Back</a>
-                    </div>
-                </div>
-
-                {/* Filters (Hidden on Print) */}
-                <div className="bg-white p-4 rounded-lg shadow mb-8 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden" dir="rtl">
-                    {/* Sort Toggles */}
-                    <div className="flex bg-gray-100 p-1 rounded-lg">
-                        <button
-                            onClick={() => setSortBy('teacher')}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${sortBy === 'teacher' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            Sort by Teacher
-                        </button>
-                        <button
-                            onClick={() => setSortBy('date')}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${sortBy === 'date' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            Sort by Date
-                        </button>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setCurrentMonth(prev => subMonths(prev, 1))} className="text-gray-600 hover:text-black font-bold text-xl">&lt;</button>
-                        <span className="text-xl font-bold min-w-[200px] text-center">{format(currentMonth, 'MMMM yyyy')}</span>
-                        <button onClick={() => setCurrentMonth(prev => addMonths(prev, 1))} className="text-gray-600 hover:text-black font-bold text-xl">&gt;</button>
+                        <a href="/admin/teachers" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">← חזרה</a>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 mb-6 print:hidden overflow-x-auto" dir="rtl">
-                    <button
-                        onClick={() => setActiveTab('DETAILED')}
-                        className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'DETAILED' ? 'border-b-2 border-blue-600 text-blue-600 bg-white' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}
-                    >
-                        דוח שינויים מפורט
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('EXTRA')}
-                        className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'EXTRA' ? 'border-b-2 border-purple-600 text-purple-600 bg-white' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}
-                    >
-                        שעות נוספות
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('ABSENT_SYSTEM')}
-                        className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'ABSENT_SYSTEM' ? 'border-b-2 border-red-600 text-red-600 bg-white' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}
-                    >
-                        היעדרויות (מחלה/חופש)
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('ABSENT_OUT')}
-                        className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'ABSENT_OUT' ? 'border-b-2 border-orange-600 text-orange-600 bg-white' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}
-                    >
-                        עבודה מחוץ לביה"ס
-                    </button>
+                <div className="flex border-b-2 border-gray-200 mb-6 print:hidden overflow-x-auto gap-1" dir="rtl">
+                    {([
+                        { key: 'ABSENT_DAILY', label: 'היעדרויות יומי', color: 'red' },
+                        { key: 'ABSENT_MONTHLY', label: 'היעדרויות חודשי', color: 'red' },
+                        { key: 'SUB_DAILY', label: 'מ"מ יומי', color: 'green' },
+                        { key: 'SUB_MONTHLY', label: 'מ"מ חודשי', color: 'purple' },
+                    ] as const).map(tab => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            className={`px-5 py-3 font-semibold text-sm transition-all whitespace-nowrap rounded-t-lg border-b-2 -mb-0.5 ${activeTab === tab.key
+                                    ? tab.color === 'red' ? 'border-red-500 text-red-700 bg-red-50'
+                                        : tab.color === 'green' ? 'border-green-500 text-green-700 bg-green-50'
+                                            : 'border-purple-500 text-purple-700 bg-purple-50'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
 
-                {/* Printable Report Title */}
-                <div className="hidden print:block text-center mb-8 mt-8">
-                    <h1 className="text-2xl font-bold" dir="rtl">
-                        דוח שינויים והחלפות - {format(currentMonth, 'MMMM yyyy')}
-                        <span className="text-sm font-normal block mt-1 text-gray-500">
-                            (Sorted by {sortBy === 'teacher' ? 'Substitute Teacher' : 'Date'})
-                        </span>
-                    </h1>
+                {/* Date / Month Navigator */}
+                <div className="bg-white rounded-xl shadow-sm px-6 py-4 mb-6 flex items-center justify-between print:hidden border border-gray-200">
+                    <button
+                        onClick={() => setCurrentDate(prev => isDailyTab ? subDays(prev, 1) : subMonths(prev, 1))}
+                        className="text-gray-600 hover:text-black font-bold text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                    >
+                        &lt;
+                    </button>
+                    <div className="text-center">
+                        <div className="text-xl font-bold text-gray-800">
+                            {isDailyTab ? format(currentDate, 'dd/MM/yyyy') : format(currentDate, 'MMMM yyyy')}
+                        </div>
+                        {isDailyTab && (
+                            <div className="text-sm text-gray-500 mt-0.5">
+                                {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][currentDate.getDay()]}
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setCurrentDate(prev => isDailyTab ? addDays(prev, 1) : addMonths(prev, 1))}
+                        className="text-gray-600 hover:text-black font-bold text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                    >
+                        &gt;
+                    </button>
                 </div>
 
                 {loading ? (
-                    <div className="text-center py-12 text-gray-500">Loading report...</div>
+                    <div className="text-center py-16 text-gray-400">
+                        <div className="text-4xl mb-4">⏳</div>
+                        <div className="text-lg">טוען נתונים...</div>
+                    </div>
                 ) : (
                     <>
-                        {activeTab === 'DETAILED' && (
-                            <div className="space-y-8" dir="rtl">
-                                {detailedSubs.length === 0 ? (
-                                    <div className="text-center py-12 text-gray-500 bg-white rounded shadow">לא נמצאו כיסויים או שעות נוספות לחודש זה.</div>
-                                ) : sortBy === 'teacher' ? (
-                                    // Grouped View
-                                    Object.entries(groupedSubs).map(([teacherName, subs]) => (
-                                        <div key={teacherName} className="bg-white rounded-lg shadow overflow-hidden print:shadow-none print:border border-gray-200 mb-8 break-inside-avoid">
-                                            <div className="bg-gray-100 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
-                                                <h2 className="text-lg font-bold text-gray-800">{teacherName}</h2>
-                                                <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                                    {subs.length} substitutions
-                                                </span>
-                                            </div>
-                                            <table className="min-w-full divide-y divide-gray-200">
-                                                <thead className="bg-gray-50">
-                                                    <tr>
-                                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
-                                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">שעה</th>
-                                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פרטים</th>
-                                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">במקום</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="bg-white divide-y divide-gray-200">
-                                                    {subs.map((sub) => (
-                                                        <tr key={sub.id}>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                                {new Date(sub.date).toLocaleDateString('he-IL')}
-                                                            </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                                {sub.schedule.hourIndex}
-                                                            </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                {sub.schedule.subject} ({sub.schedule.class?.name})
-                                                                {sub.isExtra && <span className="ml-2 bg-purple-100 text-purple-800 text-xs px-2 rounded-full">שעה נוספת</span>}
-                                                                {sub.notes && <span className="block text-xs text-gray-400 mt-1 italic">{sub.notes}</span>}
-                                                            </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                {sub.schedule.teacher.firstName} {sub.schedule.teacher.lastName}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    ))
-                                ) : (
-                                    // Date View (Grouped by Date)
-                                    sortedDateKeys.map((dateKey) => {
-                                        const subs = groupedByDate[dateKey];
-                                        const displayDate = new Date(dateKey).toLocaleDateString('he-IL');
-                                        return (
-                                            <div key={dateKey} className="bg-white rounded-lg shadow overflow-hidden print:shadow-none print:border border-gray-200 mb-8 break-inside-avoid">
-                                                <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
-                                                    <h2 className="text-lg font-bold text-gray-800">{displayDate}</h2>
-                                                    <span className="text-sm font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                                                        {subs.length} items
-                                                    </span>
-                                                </div>
-                                                <table className="min-w-full divide-y divide-gray-200">
-                                                    <thead className="bg-gray-50">
-                                                        <tr>
-                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">מחליף/ה</th>
-                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">שעה</th>
-                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פרטים</th>
-                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">במקום</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="bg-white divide-y divide-gray-200">
-                                                        {subs.sort((a, b) => a.schedule.hourIndex - b.schedule.hourIndex).map((sub) => (
-                                                            <tr key={sub.id}>
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                                                                    {sub.substituteTeacher ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}` : 'Unassigned'}
-                                                                </td>
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                                    {sub.schedule.hourIndex}
-                                                                </td>
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                    {sub.schedule.subject} ({sub.schedule.class?.name})
-                                                                    {sub.isExtra && <span className="ml-2 bg-purple-100 text-purple-800 text-xs px-2 rounded-full">שעה נוספת</span>}
-                                                                    {sub.notes && <span className="block text-xs text-gray-400 mt-1 italic">{sub.notes}</span>}
-                                                                </td>
-                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                    {sub.schedule.teacher.firstName} {sub.schedule.teacher.lastName}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        );
-                                    })
-                                )}
+                        {/* ── TAB 1: ABSENCE DAILY ── */}
+                        {activeTab === 'ABSENT_DAILY' && (
+                            <div className="space-y-4">
+                                <AbsenceDailyTable
+                                    rows={dailySickSummary}
+                                    title="היעדרויות — מחלה / חופש"
+                                    color="bg-red-50 text-red-800"
+                                />
+                                <AbsenceDailyTable
+                                    rows={dailyDutySummary}
+                                    title="היעדרויות — בתפקיד"
+                                    color="bg-orange-50 text-orange-800"
+                                />
                             </div>
                         )}
 
-                        {activeTab === 'EXTRA' && (
-                            <SummaryMatrix title="שעות נוספות החודש" monthDate={currentMonth} data={extraData} />
+                        {/* ── TAB 2: ABSENCE MONTHLY ── */}
+                        {activeTab === 'ABSENT_MONTHLY' && (
+                            <div className="space-y-8">
+                                <SummaryMatrix
+                                    title="היעדרויות חודשיות — מחלה / חופש"
+                                    monthDate={currentDate}
+                                    data={absentSystemData}
+                                />
+                                <SummaryMatrix
+                                    title="היעדרויות חודשיות — בתפקיד"
+                                    monthDate={currentDate}
+                                    data={absentOutData}
+                                />
+                            </div>
                         )}
 
-                        {activeTab === 'ABSENT_SYSTEM' && (
-                            <SummaryMatrix title="דו״ח היעדרויות לחשבות (מחלה/חופש)" monthDate={currentMonth} data={absentSystemData} />
+                        {/* ── TAB 3: SUB DAILY ── */}
+                        {activeTab === 'SUB_DAILY' && (
+                            <SubDailyTable rows={dailySubSummary} />
                         )}
 
-                        {activeTab === 'ABSENT_OUT' && (
-                            <SummaryMatrix title="עבודה מחוץ לביה״ס (אין לדווח לחשבות)" monthDate={currentMonth} data={absentOutData} />
+                        {/* ── TAB 4: SUB MONTHLY ── */}
+                        {activeTab === 'SUB_MONTHLY' && (
+                            <SummaryMatrix
+                                title="מילוי מקום חודשי — שעות"
+                                monthDate={currentDate}
+                                data={monthlySubData}
+                            />
                         )}
                     </>
                 )}
