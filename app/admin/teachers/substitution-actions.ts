@@ -57,11 +57,36 @@ export async function cancelAbsence(substitutionId: string) {
         throw new Error('Unauthorized');
     }
 
+    // Fetch the substitution first so we can check if it's an ad-hoc extra class
+    const sub = await prisma.substitution.findUnique({
+        where: { id: substitutionId },
+        include: { schedule: true }
+    });
+
+    if (!sub) {
+        throw new Error('Substitution not found');
+    }
+
+    // Delete the substitution record
     await prisma.substitution.delete({
         where: { id: substitutionId }
     });
 
-    revalidatePath('/', 'layout'); // Force global layout refresh to catch all nested routes including daily and teachers
+    // If it was an ad-hoc extra class, also clean up the temporary Schedule
+    // (toggleExtraClass creates a Schedule with type='FREE' and subject='Ad-hoc')
+    if (sub.isExtra && sub.schedule?.type === 'FREE' && sub.schedule?.subject === 'Ad-hoc') {
+        // Only delete if no other substitutions reference this schedule
+        const otherSubs = await prisma.substitution.count({
+            where: { scheduleId: sub.scheduleId }
+        });
+        if (otherSubs === 0) {
+            await prisma.schedule.delete({
+                where: { id: sub.scheduleId }
+            });
+        }
+    }
+
+    revalidatePath('/', 'layout');
     return { success: true };
 }
 

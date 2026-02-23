@@ -393,7 +393,12 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                     {(schedule || sub) ? (
                                                         <div
                                                             onClick={() => {
-                                                                if (sub && !sub.isExtra) {
+                                                                if (sub && sub.isExtra) {
+                                                                    // Extra class: offer to remove
+                                                                    if (confirm('האם לבטל שעה נוספת זו?')) {
+                                                                        onCancel(sub.id);
+                                                                    }
+                                                                } else if (sub && !sub.isExtra) {
                                                                     // If already sub/absent, toggle selection to change sub?
                                                                     setSelectedCell(isSelected ? null : { teacherId, hourIndex: periodIndex });
                                                                 } else if (!sub) {
