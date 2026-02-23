@@ -62,18 +62,22 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
 
             const sub = substitutions.find(s => {
                 const subDateStr = new Date(s.date).toISOString().split('T')[0];
-                return (item && s.scheduleId === item.id && subDateStr === dateStr) || (!item && s.isExtra && s.schedule?.hourIndex === hourIndex && subDateStr === dateStr && s.substituteTeacherId === teacherId);
-            });
+                // Match by scheduleId (regular items) or by substitution id (ad-hoc items where item.id = sub.id)
+                if (item && s.scheduleId === item.id && subDateStr === dateStr) return true;
+                if (item && s.id === item.id && subDateStr === dateStr) return true;
+                if (!item && s.isExtra && s.schedule?.hourIndex === hourIndex && subDateStr === dateStr && s.substituteTeacherId === teacherId) return true;
+                return false;
+            }) || (item as any)?.substitutions?.[0]; // Fallback: use embedded substitution from display items
 
             // Prepare slot info for modal
             setSelectedSlot({
-                teacherId: teacherId, // Added
-                scheduleId: item?.id, // Can be undefined now
+                teacherId: teacherId,
+                scheduleId: sub?.scheduleId || item?.id,
                 date: pureUtcDate,
                 hourIndex: hourIndex,
                 dayName: format(localDate, 'EEEE'),
                 hourTime: periods.find(p => p.index === hourIndex)?.startTime || hourIndex,
-                currentStatus: sub?.status, // ABSENT, COVERED
+                currentStatus: sub?.status,
                 substituteName: sub?.substituteTeacher ? `${sub.substituteTeacher.firstName} ${sub.substituteTeacher.lastName}` : undefined,
                 substitutionId: sub?.id,
                 isExtra: sub?.isExtra,
