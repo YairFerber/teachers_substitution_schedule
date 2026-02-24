@@ -64,6 +64,7 @@ export default async function AdminTeachersPage() {
                         <a href="/admin/daily" className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 font-medium">Daily Organizer 📅</a>
                         <a href="/admin/reports" className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 font-medium">Monthly Reports 📊</a>
                         <a href="/admin/data" className="px-4 py-2 bg-amber-100 text-amber-800 rounded hover:bg-amber-200 font-medium">Data 💾</a>
+                        <a href="/admin/help" className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 font-medium">עזרה ❓</a>
                         <a href="/" className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-700">Back to Schedule</a>
                     </div>
                 </div>

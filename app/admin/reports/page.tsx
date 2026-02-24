@@ -296,6 +296,7 @@ export default function MonthlyReportPage() {
                         <button onClick={handlePrint} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-sm">
                             🖨️ הדפסה / PDF
                         </button>
+                        <a href="/admin/help" className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-medium">עזרה ❓</a>
                         <a href="/admin/teachers" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">← חזרה</a>
                     </div>
                 </div>
