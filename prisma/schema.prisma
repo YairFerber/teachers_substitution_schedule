@@ -130,6 +130,7 @@ model Substitution {
   absenceType         String?  // SICK, VACATION, WORK_OUT, NONE
   absenceScope        String?  // DAILY, HOURLY
   isExtra             Boolean  @default(false)
+  isPaid              Boolean  @default(true)  // false = "not for pay" substitution
   notes               String?
   
   createdAt           DateTime @default(now())

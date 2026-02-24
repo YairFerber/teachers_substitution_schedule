@@ -34,12 +34,13 @@ interface DailySubSelectorProps {
     schedulesAtHour: Schedule[]; // Schedules for this specific hour
     subsAtHour: Substitution[];   // Substitutions occurring at this hour
     allSubsToday?: Substitution[]; // Substitutions for the entire day (for DAILY checking)
-    onSelect: (teacherId: string) => void;
+    onSelect: (teacherId: string, isPaid: boolean) => void;
     onClose: () => void;
 }
 
 export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHour, subsAtHour, allSubsToday = [], onSelect, onClose }: DailySubSelectorProps) {
     const [search, setSearch] = useState('');
+    const [notForPay, setNotForPay] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     // Filter available teachers
@@ -132,6 +133,22 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
             </div>
 
             <div className="overflow-y-auto max-h-80 p-1 space-y-1">
+                {/* Not-for-Pay Checkbox */}
+                <label className="flex items-center gap-2 px-2 py-2 mb-1 rounded-lg cursor-pointer select-none"
+                    style={{ colorScheme: 'light', color: '#111827' }}
+                >
+                    <input
+                        type="checkbox"
+                        checked={notForPay}
+                        onChange={e => setNotForPay(e.target.checked)}
+                        className="w-4 h-4 accent-orange-500"
+                    />
+                    <span className="text-sm font-semibold text-orange-700">
+                        🟠 לא לתשלום (ללא שכר)
+                    </span>
+                </label>
+                <div className="border-t border-gray-100 pt-1" />
+
                 {candidates.length === 0 ? (
                     <div className="text-center py-4 text-gray-400 text-xs">אין מורים פנויים</div>
                 ) : (
@@ -163,7 +180,7 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
                         return (
                             <button
                                 key={teacher.id}
-                                onClick={() => onSelect(teacher.id)}
+                                onClick={() => onSelect(teacher.id, !notForPay)}
                                 className={`w-full text-right px-3 py-2 text-sm rounded transition-colors flex justify-between items-center group ${bgClass}`}
                             >
                                 <div className="flex items-center gap-2">

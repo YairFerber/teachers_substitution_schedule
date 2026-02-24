@@ -12,7 +12,7 @@ interface SubstitutionReportItem {
     isExtra?: boolean;
     absenceType?: string | null;
     substituteTeacherId?: string | null;
-    notes?: string | null;
+    isPaid?: boolean | null;
     schedule: {
         hourIndex: number;
         subject: string | null;
@@ -22,7 +22,7 @@ interface SubstitutionReportItem {
     substituteTeacher?: { id: string; firstName: string; lastName: string } | null;
 }
 
-type TabType = 'ABSENT_DAILY' | 'ABSENT_MONTHLY' | 'SUB_DAILY' | 'SUB_MONTHLY';
+type TabType = 'ABSENT_DAILY' | 'ABSENT_MONTHLY' | 'SUB_DAILY' | 'SUB_MONTHLY' | 'SUB_NO_PAY';
 
 const absenceTypeLabel = (type?: string | null) => {
     if (type === 'SICK') return '🤒 מחלה';
@@ -183,14 +183,20 @@ export default function MonthlyReportPage() {
         true
     );
 
-    // Monthly Sub matrix — substitutions are ALWAYS hourly (no DAILY scope), summary = total hours
+    // Monthly Sub matrix — PAID substitutions only
     const subData = generateMatrixData(
-        sub => Boolean(sub.substituteTeacherId && sub.status === 'COVERED'),
+        sub => Boolean(sub.substituteTeacherId && sub.status === 'COVERED' && sub.isPaid !== false),
         sub => ({ id: sub.substituteTeacherId!, name: `${sub.substituteTeacher?.firstName} ${sub.substituteTeacher?.lastName}` }),
-        false // Never X for substitutions
+        false
     );
-    // Hide totalDaily (0 always), keep totalHourly as total hours
     const monthlySubData = subData.map(d => ({ ...d, totalDaily: undefined }));
+
+    // Monthly Sub matrix — NO-PAY substitutions only
+    const noPaySubData = generateMatrixData(
+        sub => Boolean(sub.substituteTeacherId && sub.status === 'COVERED' && sub.isPaid === false),
+        sub => ({ id: sub.substituteTeacherId!, name: `${sub.substituteTeacher?.firstName} ${sub.substituteTeacher?.lastName}` }),
+        false
+    ).map(d => ({ ...d, totalDaily: undefined }));
 
     const handlePrint = () => window.print();
 
@@ -301,15 +307,17 @@ export default function MonthlyReportPage() {
                         { key: 'ABSENT_MONTHLY', label: 'היעדרויות חודשי', color: 'red' },
                         { key: 'SUB_DAILY', label: 'מ"מ יומי', color: 'green' },
                         { key: 'SUB_MONTHLY', label: 'מ"מ חודשי', color: 'purple' },
+                        { key: 'SUB_NO_PAY', label: 'מ"מ ללא תשלום', color: 'orange' },
                     ] as const).map(tab => (
                         <button
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
                             className={`px-5 py-3 font-semibold text-sm transition-all whitespace-nowrap rounded-t-lg border-b-2 -mb-0.5 ${activeTab === tab.key
-                                    ? tab.color === 'red' ? 'border-red-500 text-red-700 bg-red-50'
-                                        : tab.color === 'green' ? 'border-green-500 text-green-700 bg-green-50'
+                                ? tab.color === 'red' ? 'border-red-500 text-red-700 bg-red-50'
+                                    : tab.color === 'green' ? 'border-green-500 text-green-700 bg-green-50'
+                                        : tab.color === 'orange' ? 'border-orange-500 text-orange-700 bg-orange-50'
                                             : 'border-purple-500 text-purple-700 bg-purple-50'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                                 }`}
                         >
                             {tab.label}
@@ -393,6 +401,15 @@ export default function MonthlyReportPage() {
                                 title="מילוי מקום חודשי — שעות"
                                 monthDate={currentDate}
                                 data={monthlySubData}
+                            />
+                        )}
+
+                        {/* ── TAB 5: NO-PAY MONTHLY ── */}
+                        {activeTab === 'SUB_NO_PAY' && (
+                            <SummaryMatrix
+                                title="מילוי מקום ללא תשלום — חודשי"
+                                monthDate={currentDate}
+                                data={noPaySubData}
                             />
                         )}
                     </>

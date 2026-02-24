@@ -298,7 +298,7 @@ export async function findAvailableTeachers(date: Date, hourIndex: number) {
     return candidates;
 }
 
-export async function assignSubstitute(substitutionId: string, substituteTeacherId: string, isExtra: boolean = false) {
+export async function assignSubstitute(substitutionId: string, substituteTeacherId: string, isExtra: boolean = false, isPaid: boolean = true) {
     const session = await auth();
     if (!session?.user || (session.user as any).role !== 'ADMIN') {
         throw new Error('Unauthorized');
@@ -309,7 +309,8 @@ export async function assignSubstitute(substitutionId: string, substituteTeacher
         data: {
             substituteTeacherId,
             status: 'COVERED',
-            isExtra
+            isExtra,
+            isPaid
         }
     });
 

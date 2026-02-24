@@ -32,6 +32,7 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
     const [selectedTeacher, setSelectedTeacher] = useState('');
     const [absenceType, setAbsenceType] = useState('SICK');
     const [extraNotes, setExtraNotes] = useState('');
+    const [notForPay, setNotForPay] = useState(false);
 
     // Reset when opening
     useEffect(() => {
@@ -108,7 +109,7 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
         if (!selectedTeacher || !slotInfo.substitutionId) return;
         setLoading(true);
         try {
-            await assignSubstitute(slotInfo.substitutionId, selectedTeacher);
+            await assignSubstitute(slotInfo.substitutionId, selectedTeacher, false, !notForPay);
             onSuccess();
             onClose();
         } catch (e) {
@@ -299,20 +300,40 @@ export default function AbsenceModal({ isOpen, onClose, slotInfo, onSuccess }: A
                             )}
                         </div>
 
-                        <div className="flex gap-2 pt-2">
-                            <button
-                                onClick={() => setStep('VIEW')}
-                                className="w-1/3 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                        <div className="flex flex-col gap-2 pt-2" dir="rtl">
+                            {/* Not-for-Pay Toggle */}
+                            <label className="flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer select-none"
+                                style={{
+                                    colorScheme: 'light', color: '#111827',
+                                    borderColor: notForPay ? '#f97316' : '#e5e7eb',
+                                    backgroundColor: notForPay ? '#fff7ed' : '#f9fafb'
+                                }}
                             >
-                                Back
-                            </button>
-                            <button
-                                onClick={handleAssign}
-                                disabled={!selectedTeacher || loading}
-                                className="w-2/3 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                            >
-                                {loading ? 'Assigning...' : 'Confirm Assignment'}
-                            </button>
+                                <input
+                                    type="checkbox"
+                                    checked={notForPay}
+                                    onChange={e => setNotForPay(e.target.checked)}
+                                    className="w-4 h-4 accent-orange-500"
+                                />
+                                <span className="text-sm font-semibold text-orange-700">
+                                    🟠 לא לתשלום (ללא שכר)
+                                </span>
+                            </label>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setStep('VIEW')}
+                                    className="w-1/3 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    onClick={handleAssign}
+                                    disabled={!selectedTeacher || loading}
+                                    className="w-2/3 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                                >
+                                    {loading ? 'Assigning...' : 'Confirm Assignment'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

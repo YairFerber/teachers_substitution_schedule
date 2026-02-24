@@ -206,8 +206,8 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
         router.refresh();
     };
 
-    const onAssignSub = async (subId: string, teacherId: string) => {
-        await assignSubstitute(subId, teacherId);
+    const onAssignSub = async (subId: string, teacherId: string, isPaid: boolean = true) => {
+        await assignSubstitute(subId, teacherId, false, isPaid);
         router.refresh();
         setSelectedCell(null);
     };
@@ -483,7 +483,7 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                         return h === periodIndex;
                                                                     })}
                                                                     allSubsToday={initialSubstitutions}
-                                                                    onSelect={(subTeacherId) => onAssignSub(sub.id, subTeacherId)}
+                                                                    onSelect={(subTeacherId, isPaid) => onAssignSub(sub.id, subTeacherId, isPaid)}
                                                                     onClose={() => setSelectedCell(null)}
                                                                 />
                                                             )}
