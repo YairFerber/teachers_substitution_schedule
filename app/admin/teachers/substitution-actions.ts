@@ -114,9 +114,9 @@ export async function markDailyAbsence(teacherId: string, date: Date, absenceTyp
         }
     });
 
-    // 4. Create ABSENT substitution for each schedule the teacher has
-    // We only mark actual teaching/meeting hours as absent for substitution tracking
-    const schedulesToMark = schedules.filter(s => s.type !== 'FREE');
+    // 4. Create ABSENT substitution ONLY for regular teaching classes (not STAY, INDIVIDUAL, MEETING, etc.)
+    // Daily absence is still recorded via absenceScope:'DAILY' on all REGULAR periods.
+    const schedulesToMark = schedules.filter(s => s.type === 'REGULAR');
 
     await prisma.substitution.createMany({
         data: schedulesToMark.map(s => ({
