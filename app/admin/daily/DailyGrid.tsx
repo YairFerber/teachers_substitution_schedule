@@ -31,6 +31,7 @@ interface Substitution {
     substituteTeacherId: string | null;
     status: string;
     isExtra?: boolean;
+    isPaid?: boolean;
     notes?: string;
     absenceType?: string;
     schedule?: Schedule; // Now included from server
@@ -439,7 +440,7 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
 
                                                             {sub ? (
                                                                 <div className={`w-full p-1 rounded text-white font-bold text-[10px] flex justify-between items-center group/cancel
-                                                                        ${sub.status === 'ABSENT' ? 'bg-red-500' : sub.isExtra ? 'bg-purple-500' : 'bg-green-500'}
+                                                                        ${sub.status === 'ABSENT' ? 'bg-red-500' : sub.isExtra ? 'bg-purple-500' : (sub.status === 'COVERED' && sub.isPaid === false) ? 'bg-yellow-500' : 'bg-green-500'}
                                                                     `}>
                                                                     <span className="truncate">
                                                                         {sub.status === 'ABSENT' ? 'נעדר' : sub.isExtra ? 'שעה נוספת' : (sub.substituteTeacher?.lastName || 'מוחלף')}
@@ -473,20 +474,7 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                                                                 </div>
                                                             )}
 
-                                                            {isSelected && sub && !sub.isExtra && (
-                                                                <DailySubSelector
-                                                                    hourIndex={periodIndex}
-                                                                    allTeachers={allTeachers}
-                                                                    schedulesAtHour={initialSchedules.filter(s => s.hourIndex === periodIndex)}
-                                                                    subsAtHour={initialSubstitutions.filter(s => {
-                                                                        const h = s.schedule ? s.schedule.hourIndex : initialSchedules.find(sch => sch.id === s.scheduleId)?.hourIndex;
-                                                                        return h === periodIndex;
-                                                                    })}
-                                                                    allSubsToday={initialSubstitutions}
-                                                                    onSelect={(subTeacherId, isPaid) => onAssignSub(sub.id, subTeacherId, isPaid)}
-                                                                    onClose={() => setSelectedCell(null)}
-                                                                />
-                                                            )}
+                                                            {/* DailySubSelector is now rendered as a modal below */}
                                                         </div>
                                                     ) : (
                                                         <div className="w-full h-full p-1 rounded transition-colors">
@@ -512,6 +500,43 @@ export default function DailyGrid({ dateStr, allTeachers, initialSchedules, init
                     </tbody>
                 </table>
             </div>
+
+            {/* Substitute Picker Modal — rendered at root level, outside the cells */}
+            {selectedCell && (() => {
+                const sc = initialSchedules.find(s => s.teacherId === selectedCell.teacherId && s.hourIndex === selectedCell.hourIndex);
+                const sub = sc ? initialSubstitutions.find(s => s.scheduleId === sc.id) : null;
+                if (!sub || sub.isExtra) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) setSelectedCell(null); }}>
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" dir="rtl"
+                            style={{ colorScheme: 'light', color: '#111827', backgroundColor: 'white' }}
+                            onClick={e => e.stopPropagation()}>
+                            <div className="px-5 pt-5 pb-3 border-b border-gray-100">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-gray-800">שיבוץ מחליף/ה</h3>
+                                    <button onClick={() => setSelectedCell(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    שעה {selectedCell.hourIndex} — {allTeachers.find(t => t.id === selectedCell.teacherId)?.lastName}
+                                </p>
+                            </div>
+                            <DailySubSelector
+                                hourIndex={selectedCell.hourIndex}
+                                allTeachers={allTeachers}
+                                schedulesAtHour={initialSchedules.filter(s => s.hourIndex === selectedCell.hourIndex)}
+                                subsAtHour={initialSubstitutions.filter(s => {
+                                    const h = s.schedule ? s.schedule.hourIndex : initialSchedules.find(sch => sch.id === s.scheduleId)?.hourIndex;
+                                    return h === selectedCell.hourIndex;
+                                })}
+                                allSubsToday={initialSubstitutions}
+                                onSelect={(subTeacherId, isPaid) => onAssignSub(sub.id, subTeacherId, isPaid)}
+                                onClose={() => setSelectedCell(null)}
+                            />
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Absence Choice Modal - rendered at root level */}
             {absenceChoiceTeacherId && (

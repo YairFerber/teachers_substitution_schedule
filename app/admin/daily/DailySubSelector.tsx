@@ -120,7 +120,7 @@ export default function DailySubSelector({ hourIndex, allTeachers, schedulesAtHo
     }, [onClose]);
 
     return (
-        <div className="absolute z-50 top-full right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col text-right animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5" ref={menuRef}>
+        <div className="flex flex-col text-right" ref={menuRef}>
             <div className="p-2 border-b border-gray-100 bg-gray-50">
                 <input
                     type="text"
