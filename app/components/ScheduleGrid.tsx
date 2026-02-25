@@ -80,7 +80,7 @@ export default function ScheduleGrid({ schedule, periods, loading = false, onPer
                         {DAYS.map((_, dayIndex) => {
                             const item = scheduleMap.get(`${dayIndex}-${period.index}`);
                             const hasClass = !!item?.class;
-                            const type = item?.type || 'FREE';
+                            const type: string = item?.type || 'FREE';
 
                             const isEmpty = !item;
 
