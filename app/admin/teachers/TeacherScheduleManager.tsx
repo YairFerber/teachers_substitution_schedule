@@ -118,8 +118,9 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
                 finalItem = { ...finalItem, type: 'ABSENT_DISPLAY' as const, subject: 'ABSENT' };
             }
             if (sub && sub.status === 'COVERED' && sub.schedule?.teacherId === teacherId) {
-                // Return new style: Red BG with Green indicator
-                finalItem = { ...finalItem, type: 'COVERED_ABSENCE_DISPLAY' as any, subject: `Cover: ${sub.substituteTeacher?.firstName}` };
+                // Return new style: Red BG with Green indicator (or Yellow for unpaid)
+                const coverType = sub.isPaid === false ? 'COVERED_ABSENCE_DISPLAY_NOPAY' : 'COVERED_ABSENCE_DISPLAY';
+                finalItem = { ...finalItem, type: coverType as any, subject: `Cover: ${sub.substituteTeacher?.firstName}` };
             }
             if (sub && sub.isExtra && sub.substituteTeacherId === teacherId) {
                 // If the original teacher is doing extra here, append badge
@@ -143,7 +144,7 @@ export default function TeacherScheduleManager({ teacherId, schedule, periods, c
             classId: cover.schedule.classId,
             class: cover.schedule.class,
             subject: `Sub: ${cover.schedule.subject || 'Class'} (${cover.schedule.teacher?.lastName})`,
-            type: (cover.isExtra ? 'STAY' : 'COVERED_DISPLAY') as any, // Use STAY color maybe or custom
+            type: (cover.isExtra ? 'STAY' : (cover.isPaid === false ? 'COVERED_DISPLAY_NOPAY' : 'COVERED_DISPLAY')) as any,
             substitutions: [cover]
         }));
 

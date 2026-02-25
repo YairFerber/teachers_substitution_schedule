@@ -17,7 +17,9 @@ const getTypeColor = (type: string, hasClass: boolean) => {
     if (type === 'FREE' && !hasClass) return 'bg-gray-50 border-gray-100 text-gray-400';
     if (type === 'ABSENT_DISPLAY') return 'bg-red-100 border-red-300 text-red-800 border-2 border-dashed';
     if (type === 'COVERED_ABSENCE_DISPLAY') return 'bg-[repeating-linear-gradient(45deg,#dcfce7,#dcfce7_10px,#fee2e2_10px,#fee2e2_20px)] border-green-500 text-green-900 border-l-4 shadow-sm'; // Striped Green/Red
+    if (type === 'COVERED_ABSENCE_DISPLAY_NOPAY') return 'bg-[repeating-linear-gradient(45deg,#fef9c3,#fef9c3_10px,#fee2e2_10px,#fee2e2_20px)] border-yellow-500 text-yellow-900 border-l-4 shadow-sm'; // Striped Yellow/Red (unpaid)
     if (type === 'COVERED_DISPLAY') return 'bg-green-100 border-green-500 text-green-900 border-l-4 shadow-sm';
+    if (type === 'COVERED_DISPLAY_NOPAY') return 'bg-yellow-100 border-yellow-500 text-yellow-900 border-l-4 shadow-sm'; // Unpaid
     if (type === 'STAY') return 'bg-blue-50 border-blue-200 text-blue-700'; // Shahiya
     if (type === 'INDIVIDUAL') return 'bg-purple-50 border-purple-200 text-purple-700'; // Partani
     if (type === 'MEETING' || type === 'TEAM_MEETING') return 'bg-yellow-50 border-yellow-200 text-yellow-700';
@@ -103,11 +105,12 @@ export default function ScheduleGrid({ schedule, periods, loading = false, onPer
                                                     type === 'STAY' ? 'שהייה' :
                                                         type === 'INDIVIDUAL' ? 'פרטני' :
                                                             type === 'MEETING' ? 'ישיבה' :
-                                                                type === 'COVERED_ABSENCE_DISPLAY' ? 'ממלא מקום' : type}
+                                                                type === 'COVERED_ABSENCE_DISPLAY' || type === 'COVERED_ABSENCE_DISPLAY_NOPAY' ? 'ממלא מקום' :
+                                                                    type === 'COVERED_DISPLAY_NOPAY' ? 'מ"מ (ללא תשלום)' : type}
                                             </span>
 
                                             {/* Indicate Substitution if any */}
-                                            {item.substitutions && item.substitutions.length > 0 && !['ABSENT_DISPLAY', 'COVERED_ABSENCE_DISPLAY', 'COVERED_DISPLAY'].includes(type) && (
+                                            {item.substitutions && item.substitutions.length > 0 && !['ABSENT_DISPLAY', 'COVERED_ABSENCE_DISPLAY', 'COVERED_ABSENCE_DISPLAY_NOPAY', 'COVERED_DISPLAY', 'COVERED_DISPLAY_NOPAY'].includes(type) && (
                                                 <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title="Substitution exists"></div>
                                             )}
                                         </div>
