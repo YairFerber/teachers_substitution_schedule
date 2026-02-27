@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import DatabaseSettings from './DatabaseSettings';
 
 export default function DataManagementPage() {
     const [uploading, setUploading] = useState(false);
@@ -60,6 +61,9 @@ export default function DataManagementPage() {
                     <h1 className="text-3xl font-bold text-gray-800">Data Management</h1>
                     <a href="/admin/teachers" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Back</a>
                 </div>
+
+                {/* Database Settings (Desktop only) */}
+                <DatabaseSettings />
 
                 {/* Export Section */}
                 <div className="bg-white rounded-xl shadow-md p-6 mb-8">
