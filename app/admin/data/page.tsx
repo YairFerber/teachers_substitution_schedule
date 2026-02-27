@@ -8,6 +8,11 @@ export default function DataManagementPage() {
     const [file, setFile] = useState<File | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+    // JSON import state
+    const [jsonFile, setJsonFile] = useState<File | null>(null);
+    const [jsonUploading, setJsonUploading] = useState(false);
+    const [jsonMessage, setJsonMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
@@ -44,13 +49,51 @@ export default function DataManagementPage() {
 
             setMessage({ type: 'success', text: 'Database updated successfully!' });
             setFile(null);
-            // Reset file input value?
             const fileInput = document.getElementById('file-upload') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
         } catch (err) {
             setMessage({ type: 'error', text: (err as Error).message });
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleJsonImport = async () => {
+        if (!jsonFile) {
+            setJsonMessage({ type: 'error', text: 'Please select a JSON file first.' });
+            return;
+        }
+
+        if (!confirm('⚠️ WARNING: This will REPLACE ALL data in the database with the contents of this JSON backup. Are you sure?')) {
+            return;
+        }
+
+        setJsonUploading(true);
+        setJsonMessage(null);
+
+        const formData = new FormData();
+        formData.append('file', jsonFile);
+
+        try {
+            const res = await fetch('/api/admin/data/import-json', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'JSON import failed');
+            }
+
+            setJsonMessage({ type: 'success', text: data.message || 'Database restored successfully!' });
+            setJsonFile(null);
+            const fileInput = document.getElementById('json-file-upload') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+        } catch (err) {
+            setJsonMessage({ type: 'error', text: (err as Error).message });
+        } finally {
+            setJsonUploading(false);
         }
     };
 
@@ -68,7 +111,7 @@ export default function DataManagementPage() {
                 {/* Export Section */}
                 <div className="bg-white rounded-xl shadow-md p-6 mb-8">
                     <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Export Data</h2>
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-4">
                         <a
                             href="/api/admin/data/export/full"
                             target="_blank"
@@ -83,12 +126,64 @@ export default function DataManagementPage() {
                         >
                             <span>👥</span> Download Substitute List
                         </a>
+                        <a
+                            href="/api/admin/data/export/json"
+                            target="_blank"
+                            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm"
+                        >
+                            <span>💾</span> Download Full Database (JSON)
+                        </a>
                     </div>
                 </div>
 
-                {/* Import Section */}
+                {/* JSON Import Section */}
+                <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-500">
+                    <h2 className="text-xl font-semibold text-indigo-700 mb-2 border-b pb-2">Restore Database from JSON Backup</h2>
+                    <p className="text-gray-600 mb-4 text-sm">
+                        Upload a JSON backup file (downloaded from this page or from a different instance) to restore all data.
+                        <br />
+                        <span className="font-bold text-amber-600">⚠️ This replaces ALL existing data — teachers, schedules, substitutions, and users.</span>
+                    </p>
+
+                    <div className="flex flex-col gap-4 max-w-md">
+                        <input
+                            id="json-file-upload"
+                            type="file"
+                            accept=".json"
+                            onChange={(e) => { if (e.target.files?.[0]) setJsonFile(e.target.files[0]); }}
+                            className="block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-indigo-50 file:text-indigo-700
+                                hover:file:bg-indigo-100
+                            "
+                        />
+
+                        <button
+                            onClick={handleJsonImport}
+                            disabled={!jsonFile || jsonUploading}
+                            className={`px-6 py-3 rounded-lg font-bold text-white shadow-sm transition-all
+                                ${!jsonFile || jsonUploading
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-md'
+                                }
+                            `}
+                        >
+                            {jsonUploading ? 'Restoring...' : '💾 Upload & Restore Database'}
+                        </button>
+                    </div>
+
+                    {jsonMessage && (
+                        <div className={`mt-4 p-4 rounded-lg ${jsonMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                            {jsonMessage.text}
+                        </div>
+                    )}
+                </div>
+
+                {/* Excel Import Section */}
                 <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500">
-                    <h2 className="text-xl font-semibold text-red-700 mb-4 border-b pb-2">Import Data (Overwrite)</h2>
+                    <h2 className="text-xl font-semibold text-red-700 mb-4 border-b pb-2">Import Schedule from Excel (Overwrite)</h2>
                     <p className="text-gray-600 mb-6">
                         Upload a new Excel file to replace the current schedule. <br />
                         <span className="font-bold text-red-600">Warning: This action cannot be undone.</span>
