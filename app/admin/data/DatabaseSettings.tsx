@@ -113,7 +113,7 @@ export default function DatabaseSettings() {
                         <span className="text-xl">☁️</span>
                         <div>
                             <h4 className="text-sm font-bold text-amber-800">Cloud Sync (Google Drive / OneDrive)</h4>
-                            <p className="text-xs text-amber-700 mt-1">
+                            <div className="text-xs text-amber-700 mt-1">
                                 To sync across multiple devices:
                                 <ol className="list-decimal mr-4 mt-1 space-y-1">
                                     <li>Install the Cloud Drive app (Google Drive, etc.) on this PC.</li>
@@ -122,7 +122,7 @@ export default function DatabaseSettings() {
                                     <li>Repeat on other PCs pointing to the same file.</li>
                                 </ol>
                                 <strong className="block mt-2 text-red-700">⚠️ IMPORTANT: Do not open the app on two PCs at the same time! This can cause data corruption.</strong>
-                            </p>
+                            </div>
                         </div>
                     </div>
                 </div>
